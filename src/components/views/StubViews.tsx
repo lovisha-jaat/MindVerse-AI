@@ -19,27 +19,8 @@ function TabFrame({ kicker, title, blurb, children }: { kicker: string; title: s
   );
 }
 
-export function HomeView() {
-  const { userName, currentMood } = useMindVerse();
-  return (
-    <TabFrame
-      kicker="Home"
-      title={`Welcome back${userName ? `, ${userName}` : ""}.`}
-      blurb="Your live mood signal at a glance."
-    >
-      {/* Large mood ring placeholder */}
-      <div className="grid place-items-center rounded-[24px] border border-white/10 bg-white/5 p-10 backdrop-blur-xl">
-        <div
-          className="grid h-48 w-48 place-items-center rounded-full text-5xl"
-          style={{ backgroundColor: currentMood.color + "33", boxShadow: `0 0 60px ${currentMood.color}55` }}
-        >
-          {currentMood.emoji}
-        </div>
-        <p className="mt-4 text-lg font-semibold text-white">{currentMood.label} · {currentMood.stressLevel}%</p>
-      </div>
-    </TabFrame>
-  );
-}
+// HomeView now lives in ./HomeView.tsx — re-exported from the shell directly.
+
 
 export function BearRoomView() {
   return (
