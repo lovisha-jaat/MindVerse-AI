@@ -1,25 +1,23 @@
 /**
- * HomeView.tsx
+ * HomeView.tsx — Calm pastel dashboard
  * -----------------------------------------------------------------------------
- * The dashboard the user lands on. It is *read-mostly* — everything here
- * derives from the global MindVerse state set by the ML Predictor:
+ * Mirrors the reference inspiration: a soft cream paper page with a hero
+ * Stress Level card (circular ring), a row of pastel metric cards with
+ * sparklines, an "AI Companion" bear card, and a Today's Mission tracker.
  *
- *   currentMood.stressLevel  →  hero ring percentage + glow color
- *   currentMood.color/label  →  badge pill + ring stroke tint
- *   completedMissions.length →  daily progress bar
- *
- * Energy & Happiness are *inverse functions* of stress (see helpers below)
- * so the three numbers always tell a consistent story.
+ * Data is *all* derived from the global MindVerse context:
+ *   currentMood.stressLevel  → ring %, mission bar tint, hero card mood color
+ *   completedMissions        → mission checklist + daily progress
+ *   userName                 → personalized greeting (client-only to avoid SSR mismatch)
  */
 import { useEffect, useState } from "react";
-import { ArrowRight, Cloud, Activity, Zap, Smile, Sparkles } from "lucide-react";
+import { ArrowRight, Bell, Sparkles, Check } from "lucide-react";
+import bearImg from "@/assets/bear.png";
 import { useMindVerse } from "@/context/MindVerseContext";
 
-/* ─────────────────────────────────────────────────────────────────────────── */
-/* Helpers                                                                     */
-/* ─────────────────────────────────────────────────────────────────────────── */
+/* ─────────────── helpers ──────────────────────────────────────────────── */
 
-/** Time-of-day → greeting copy. Uses the user's *local* hour. */
+/** Time-of-day → greeting. Called only on the client (see useEffect below). */
 function greetingFor(date: Date): string {
   const h = date.getHours();
   if (h < 5)  return "Good Night";
@@ -29,57 +27,35 @@ function greetingFor(date: Date): string {
   return "Good Night";
 }
 
-/**
- * Inverse score helpers. Energy decays mostly linearly with stress; Happiness
- * uses a slightly steeper curve so very high stress shows a sharp emotional
- * drop (matches user expectations from wellness apps).
- */
+// Inverse score helpers — keeps the three numbers narratively consistent.
 const energyFromStress    = (s: number) => Math.max(0, Math.min(100, Math.round(100 - s * 0.9)));
 const happinessFromStress = (s: number) => Math.max(0, Math.min(100, Math.round(100 - s * 1.05)));
+const focusFromStress     = (s: number) => Math.max(0, Math.min(100, Math.round(95 - s * 0.7)));
 
-/* ─────────────────────────────────────────────────────────────────────────── */
-/* Circular hero ring                                                          */
-/* ─────────────────────────────────────────────────────────────────────────── */
+/* ─────────────── hero stress ring ─────────────────────────────────────── */
 
 /**
- * StressRing: an SVG circle whose stroke-dashoffset animates from "empty"
- * to the target percentage on mount and whenever the value changes. The
- * stroke + outer glow are tinted by the live mood color.
+ * StressRing — SVG circle with an animated stroke-dashoffset trail. The ring
+ * is tinted to the live mood color; the inner number reads the stress %.
  */
-function StressRing({ value, color, label, emoji }: { value: number; color: string; label: string; emoji: string }) {
-  // Geometry — tuned for a 240px viewport
-  const size = 240;
-  const stroke = 16;
+function StressRing({ value, color }: { value: number; color: string }) {
+  const size = 150;
+  const stroke = 12;
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
 
-  // Animated value: start at 0 on mount so the trail "draws in".
+  // Animate from 0 on mount / when value changes.
   const [animated, setAnimated] = useState(0);
   useEffect(() => {
-    // Defer one frame so the transition picks up the change.
     const id = requestAnimationFrame(() => setAnimated(value));
     return () => cancelAnimationFrame(id);
   }, [value]);
-
   const offset = circumference - (animated / 100) * circumference;
 
   return (
-    <div
-      className="relative grid place-items-center"
-      // Outer ambient glow — driven by mood color via inline style.
-      style={{ filter: `drop-shadow(0 0 40px ${color}66)` }}
-    >
+    <div className="relative grid place-items-center">
       <svg width={size} height={size} className="-rotate-90">
-        {/* Track */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="rgba(255,255,255,0.08)"
-          strokeWidth={stroke}
-        />
-        {/* Animated progress trail */}
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="rgba(0,0,0,0.06)" strokeWidth={stroke} />
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -93,194 +69,197 @@ function StressRing({ value, color, label, emoji }: { value: number; color: stri
           style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(0.22,1,0.36,1), stroke 0.6s ease" }}
         />
       </svg>
-      {/* Centered numeric readout */}
       <div className="pointer-events-none absolute inset-0 grid place-items-center">
         <div className="text-center">
-          <div className="text-5xl" aria-hidden>{emoji}</div>
-          <div className="mt-1 text-5xl font-bold tabular-nums text-white">{value}<span className="text-2xl text-white/60">%</span></div>
-          <div className="mt-1 text-xs uppercase tracking-[0.18em] text-white/50">Stress · {label}</div>
+          <div className="text-3xl font-extrabold tabular-nums text-foreground">{value}<span className="text-lg text-muted-foreground">%</span></div>
         </div>
       </div>
     </div>
   );
 }
 
-/* ─────────────────────────────────────────────────────────────────────────── */
-/* Main view                                                                   */
-/* ─────────────────────────────────────────────────────────────────────────── */
+/* ─────────────── tiny sparkline (decorative) ──────────────────────────── */
+
+function Sparkline({ color, seed = 0 }: { color: string; seed?: number }) {
+  // Deterministic pseudo-random wave so the line doesn't reflow each render.
+  const pts = Array.from({ length: 14 }, (_, i) => {
+    const v = 0.5 + 0.35 * Math.sin((i + seed) * 0.9) + 0.08 * Math.cos((i + seed) * 2.1);
+    return [i * (80 / 13), 28 - v * 24] as const;
+  });
+  const d = pts.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+  return (
+    <svg viewBox="0 0 80 32" className="h-8 w-full" preserveAspectRatio="none">
+      <path d={d} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/* ─────────────── main view ────────────────────────────────────────────── */
+
+const STARTER_MISSIONS = [
+  { id: "water",     label: "Drink 2L Water" },
+  { id: "walk",      label: "10 Min Walk" },
+  { id: "breath",    label: "Breathing Exercise" },
+  { id: "sleep",     label: "Sleep before 11 PM" },
+];
 
 export function HomeView() {
-  const { userName, currentMood, completedMissions, setActiveTab } = useMindVerse();
+  const { userName, currentMood, completedMissions, toggleMission, setActiveTab } = useMindVerse();
 
-  // Derived metrics — recomputed every render, cheap.
   const energy    = energyFromStress(currentMood.stressLevel);
   const happiness = happinessFromStress(currentMood.stressLevel);
+  const focus     = focusFromStress(currentMood.stressLevel);
 
-  // Daily missions: pretend the goal is 10 per day.
-  const missionsTotal = 10;
-  const missionsDone  = Math.min(missionsTotal, completedMissions.length);
+  const missionsTotal = STARTER_MISSIONS.length;
+  const missionsDone  = STARTER_MISSIONS.filter((m) => completedMissions.includes(m.id)).length;
   const missionsPct   = (missionsDone / missionsTotal) * 100;
 
-  // Greeting recomputed each render (cheap; no state needed).
-  const greeting = greetingFor(new Date());
+  // Greeting depends on the local clock — only know it client-side, so we
+  // render a stable placeholder on first paint to avoid React hydration
+  // mismatches between the SSR HTML and the browser.
+  const [greeting, setGreeting] = useState("Hello");
+  useEffect(() => { setGreeting(greetingFor(new Date())); }, []);
 
   return (
-    <div className="space-y-7 animate-fade-in">
-      {/* ─── HEADER ────────────────────────────────────────────────────── */}
-      <header className="space-y-1">
-        <p className="text-xs uppercase tracking-[0.18em] text-white/40">🌱 MindVerse AI</p>
-        <h1 className="text-2xl font-semibold text-white sm:text-3xl">
-          {greeting}, {userName ?? "friend"} <span aria-hidden>✨</span>
-        </h1>
-        <p className="text-sm text-white/60">Here's how your mind is doing right now.</p>
+    <div className="space-y-5 animate-fade-in">
+      {/* ─── HEADER ─────────────────────────────────────────────────────── */}
+      <header className="flex items-start justify-between gap-3">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-muted-foreground">
+            {greeting}, <span className="text-foreground">{userName ?? "friend"}</span> <span aria-hidden>🌿</span>
+          </p>
+          <h1 className="font-display text-3xl font-extrabold leading-tight text-foreground">
+            MindVerse <span className="text-sage">AI</span>
+          </h1>
+          <p className="text-xs text-muted-foreground">Your Personal Mental Wellness Companion</p>
+        </div>
+        <button
+          type="button"
+          aria-label="Notifications"
+          className="grid h-10 w-10 place-items-center rounded-full bg-card text-muted-foreground shadow-soft transition hover:text-foreground"
+        >
+          <Bell className="h-5 w-5" />
+        </button>
       </header>
 
-      {/* ─── HERO RING ─────────────────────────────────────────────────── */}
-      <section className="rounded-[24px] border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-        <div className="flex justify-center py-2">
-          <StressRing
-            value={currentMood.stressLevel}
-            color={currentMood.color}
-            label={currentMood.label}
-            emoji={currentMood.emoji}
+      {/* ─── HERO ROW: Stress (large) + Energy/Happiness/Focus (stacked) ── */}
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-5">
+        {/* Stress Level card — peach pastel, ring inside */}
+        <article className="sm:col-span-2 rounded-[28px] bg-peach-soft p-5 shadow-soft">
+          <p className="text-xs font-semibold uppercase tracking-wider text-foreground/70">Stress Level</p>
+          <div className="mt-4 flex justify-center">
+            <StressRing value={currentMood.stressLevel} color={currentMood.color} />
+          </div>
+          <p className="mt-3 text-center text-sm font-semibold text-foreground/80">
+            {currentMood.emoji} {currentMood.label}
+          </p>
+        </article>
+
+        {/* Metric stack: Energy / Happiness / Focus */}
+        <div className="sm:col-span-3 grid grid-cols-1 gap-3">
+          <MetricRow label="Energy"    value={energy}    color="var(--butter)"   seed={1} />
+          <MetricRow label="Happiness" value={happiness} color="var(--lavender)" seed={3} />
+          <MetricRow label="Focus"     value={focus}     color="var(--sky)"      seed={5} />
+        </div>
+      </section>
+
+      {/* ─── AI COMPANION BANNER ───────────────────────────────────────── */}
+      <section className="overflow-hidden rounded-[28px] bg-card p-5 shadow-soft">
+        <div className="flex items-center gap-4">
+          <div className="min-w-0 flex-1 space-y-2">
+            <p className="text-xs font-bold uppercase tracking-wider text-sage">AI Companion</p>
+            <p className="text-sm leading-relaxed text-foreground/85">
+              Hi {userName ?? "friend"} 👋 <br />
+              You've been doing amazing today. Let's take a 3-min breathing break?
+            </p>
+            <button
+              type="button"
+              onClick={() => setActiveTab("bear-room")}
+              className="inline-flex items-center gap-2 rounded-full bg-sage px-4 py-2 text-sm font-semibold text-white shadow-soft transition hover:bg-sage/90"
+            >
+              Start Now <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+          <img
+            src={bearImg}
+            alt=""
+            aria-hidden
+            width={120}
+            height={120}
+            loading="lazy"
+            className="h-28 w-28 shrink-0 object-contain drop-shadow-[0_8px_20px_rgba(120,90,60,0.18)]"
           />
         </div>
-
-        {/* Active mood pill — large, hex-tinted, sits directly under the ring */}
-        <div className="mt-6 flex justify-center">
-          <div
-            className="flex items-center gap-3 rounded-full px-5 py-3 shadow-lg"
-            style={{ backgroundColor: currentMood.color, color: "#1b1330" }}
-          >
-            <span className="text-2xl" aria-hidden>{currentMood.emoji}</span>
-            <span className="text-sm font-semibold uppercase tracking-wider">
-              Today · {currentMood.label}
-            </span>
-          </div>
-        </div>
       </section>
 
-      {/* ─── METRIC GRID (Energy + Happiness) ─────────────────────────── */}
-      <section className="grid grid-cols-2 gap-4">
-        <MetricCard
-          icon={Zap}
-          label="Energy"
-          value={energy}
-          accent="#FFD66B"
-          caption="Inverse of cognitive load"
-        />
-        <MetricCard
-          icon={Smile}
-          label="Happiness"
-          value={happiness}
-          accent="#A8D5BA"
-          caption="Modeled from mood tier"
-        />
-      </section>
-
-      {/* ─── CALL-TO-ACTION BANNERS ───────────────────────────────────── */}
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <CtaBanner
-          onClick={() => setActiveTab("bear-room")}
-          icon={Cloud}
-          eyebrow="Digital Sanctuary"
-          title="Open the Bear Room"
-          blurb="A weather-reactive space to decompress."
-          gradient="from-[#241846] via-[#2f1d5c] to-[#A8D5BA]/40"
-        />
-        <CtaBanner
-          onClick={() => setActiveTab("predictor")}
-          icon={Activity}
-          eyebrow="Biomarker Scan"
-          title="Launch a fresh AI scan"
-          blurb="Re-run the model with today's signal."
-          gradient="from-[#241846] via-[#3a1d5c] to-[#FFD66B]/40"
-        />
-      </section>
-
-      {/* ─── DAILY RECOVERY PROGRESS ──────────────────────────────────── */}
-      <section className="rounded-[24px] border border-white/10 bg-white/5 p-5 backdrop-blur-xl">
-        <header className="flex items-baseline justify-between">
+      {/* ─── TODAY'S MISSION ───────────────────────────────────────────── */}
+      <section className="rounded-[28px] bg-card p-5 shadow-soft">
+        <header className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-[#FFD66B]" />
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-white/70">
-              Daily Recovery
-            </h3>
+            <Sparkles className="h-4 w-4 text-butter" />
+            <h3 className="text-sm font-bold uppercase tracking-wider text-foreground/80">Today's Mission</h3>
           </div>
-          <p className="text-sm font-semibold tabular-nums text-white">
-            {missionsDone}/{missionsTotal} Missions Completed
-          </p>
+          <span className="rounded-full bg-sage-soft px-3 py-1 text-xs font-bold text-sage">
+            {Math.round(missionsPct)}%
+          </span>
         </header>
-        {/* Linear progress bar — tinted to the live mood color */}
-        <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-white/10">
+
+        <ul className="space-y-2">
+          {STARTER_MISSIONS.map((m) => {
+            const done = completedMissions.includes(m.id);
+            return (
+              <li key={m.id}>
+                <button
+                  type="button"
+                  onClick={() => toggleMission(m.id)}
+                  className="flex w-full items-center gap-3 rounded-2xl bg-muted/60 px-3 py-2.5 text-left transition hover:bg-muted"
+                >
+                  <span
+                    className={`grid h-6 w-6 place-items-center rounded-full border-2 transition ${
+                      done ? "border-sage bg-sage text-white" : "border-border bg-card"
+                    }`}
+                  >
+                    {done && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+                  </span>
+                  <span className={`text-sm font-medium ${done ? "text-muted-foreground line-through" : "text-foreground"}`}>
+                    {m.label}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+
+        {/* Linear progress bar tinted to live mood color */}
+        <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-muted">
           <div
             className="h-full rounded-full transition-[width] duration-700 ease-out"
             style={{
               width: `${missionsPct}%`,
-              background: `linear-gradient(90deg, ${currentMood.color}, #FFD66B)`,
-              boxShadow: `0 0 16px ${currentMood.color}88`,
+              background: `linear-gradient(90deg, ${currentMood.color}, var(--butter))`,
             }}
           />
         </div>
-        <p className="mt-3 text-xs text-white/50">
-          {missionsDone === missionsTotal
-            ? "All missions cleared — well done."
-            : `${missionsTotal - missionsDone} small wins left for today.`}
+        <p className="mt-2 text-xs text-muted-foreground">
+          {missionsDone}/{missionsTotal} missions completed today
         </p>
       </section>
     </div>
   );
 }
 
-/* ─────────────────────────────────────────────────────────────────────────── */
-/* Sub-components                                                              */
-/* ─────────────────────────────────────────────────────────────────────────── */
+/* ─────────────── sub-components ───────────────────────────────────────── */
 
-function MetricCard({
-  icon: Icon, label, value, accent, caption,
-}: {
-  icon: typeof Zap; label: string; value: number; accent: string; caption: string;
-}) {
+function MetricRow({ label, value, color, seed }: { label: string; value: number; color: string; seed: number }) {
   return (
-    <div className="rounded-[24px] border border-white/10 bg-white/5 p-5 backdrop-blur-xl">
-      <div className="flex items-center justify-between">
-        <span className="grid h-9 w-9 place-items-center rounded-xl" style={{ backgroundColor: accent + "22", color: accent }}>
-          <Icon className="h-4 w-4" />
-        </span>
-        <span className="text-xs uppercase tracking-wider text-white/50">{label}</span>
+    <div className="flex items-center gap-3 rounded-[24px] bg-card p-4 shadow-soft">
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+        <p className="mt-0.5 text-2xl font-extrabold tabular-nums text-foreground">{value}<span className="ml-0.5 text-base text-muted-foreground">%</span></p>
       </div>
-      <p className="mt-4 text-3xl font-bold tabular-nums text-white">
-        {value}<span className="ml-0.5 text-lg font-medium text-white/50">%</span>
-      </p>
-      {/* Mini bar showing the same metric visually */}
-      <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-        <div className="h-full rounded-full transition-[width] duration-700" style={{ width: `${value}%`, backgroundColor: accent }} />
+      <div className="w-24 shrink-0">
+        <Sparkline color={color} seed={seed} />
       </div>
-      <p className="mt-2 text-[11px] text-white/40">{caption}</p>
     </div>
-  );
-}
-
-function CtaBanner({
-  onClick, icon: Icon, eyebrow, title, blurb, gradient,
-}: {
-  onClick: () => void; icon: typeof Cloud; eyebrow: string; title: string; blurb: string; gradient: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`group relative overflow-hidden rounded-[24px] border border-white/10 bg-gradient-to-br ${gradient} p-5 text-left shadow-lg transition hover:scale-[1.01] hover:shadow-2xl`}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <span className="grid h-10 w-10 place-items-center rounded-2xl bg-white/15 text-white backdrop-blur">
-          <Icon className="h-5 w-5" />
-        </span>
-        <ArrowRight className="h-5 w-5 text-white/70 transition group-hover:translate-x-1 group-hover:text-white" />
-      </div>
-      <p className="mt-4 text-[10px] uppercase tracking-widest text-white/60">{eyebrow}</p>
-      <h4 className="mt-1 text-lg font-semibold text-white">{title}</h4>
-      <p className="mt-1 text-xs text-white/70">{blurb}</p>
-    </button>
   );
 }
