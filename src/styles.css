@@ -4,19 +4,15 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/*
- * Design system definition.
+/* ─────────────────────────────────────────────────────────────────────────────
+ * MindVerse design system — "Calm Sanctuary"
  *
- * The @theme inline block maps CSS custom properties to Tailwind utility
- * classes (e.g. --color-primary -> bg-primary, text-primary).
+ * Light, pastel, cream-paper aesthetic. Soft sage greens, peach coral accents,
+ * dusty yellow energy, lavender happiness. Designed for low cognitive load.
  *
- * The :root and .dark blocks define the actual color values using oklch.
- * All colors MUST use oklch format.
- *
- * To add a new semantic color:
- * 1. Add the variable to :root (light value) and .dark (dark value)
- * 2. Register it in @theme inline as --color-<name>: var(--<name>)
- */
+ * All semantic tokens are exposed to Tailwind via @theme inline so utilities
+ * like `bg-card`, `text-foreground`, `border-border` map to these values.
+ * ──────────────────────────────────────────────────────────────────────────── */
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
@@ -26,6 +22,7 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -46,11 +43,25 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-ring-offset-background: var(--background);
+
+  /* Brand pastel tokens */
+  --color-sage: var(--sage);
+  --color-sage-soft: var(--sage-soft);
+  --color-peach: var(--peach);
+  --color-peach-soft: var(--peach-soft);
+  --color-butter: var(--butter);
+  --color-butter-soft: var(--butter-soft);
+  --color-lavender: var(--lavender);
+  --color-lavender-soft: var(--lavender-soft);
+  --color-sky: var(--sky);
+  --color-sky-soft: var(--sky-soft);
+
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -59,77 +70,70 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-display: "Nunito", ui-rounded, "SF Pro Rounded", system-ui, sans-serif;
+  --font-sans: "Nunito", ui-rounded, "SF Pro Rounded", system-ui, sans-serif;
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-primary: oklch(0.208 0.042 265.755);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.968 0.007 247.896);
-  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-border: oklch(0.929 0.013 255.508);
-  --sidebar-ring: oklch(0.704 0.04 256.788);
-}
+  --radius: 1rem;
 
-.dark {
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  /* Page paper — warm off-white cream */
+  --background: oklch(0.985 0.012 85);
+  --foreground: oklch(0.28 0.03 250);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.28 0.03 250);
+
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.28 0.03 250);
+
+  /* Primary = sage green */
+  --primary: oklch(0.72 0.09 150);
+  --primary-foreground: oklch(0.99 0.01 150);
+
+  --secondary: oklch(0.96 0.015 85);
+  --secondary-foreground: oklch(0.28 0.03 250);
+
+  --muted: oklch(0.96 0.012 85);
+  --muted-foreground: oklch(0.5 0.02 250);
+
+  --accent: oklch(0.94 0.04 80);
+  --accent-foreground: oklch(0.28 0.03 250);
+
+  --destructive: oklch(0.68 0.18 30);
+  --destructive-foreground: oklch(0.99 0.005 0);
+
+  --border: oklch(0.92 0.012 85);
+  --input: oklch(0.94 0.012 85);
+  --ring: oklch(0.72 0.09 150);
+
+  /* Brand pastel palette — raw hex-equivalents for direct utility use */
+  --sage:         #87A878;   /* primary calm green */
+  --sage-soft:    #DCE8D4;
+  --peach:        #F4A896;   /* stress / warmth */
+  --peach-soft:   #FCE0D7;
+  --butter:       #F2C97C;   /* energy / sunshine */
+  --butter-soft:  #FBEBC9;
+  --lavender:     #C9B6DC;   /* happiness */
+  --lavender-soft:#EFE6F5;
+  --sky:          #A8C5DC;   /* focus / calm */
+  --sky-soft:     #DEEAF3;
+
+  --chart-1: var(--sage);
+  --chart-2: var(--peach);
+  --chart-3: var(--butter);
+  --chart-4: var(--lavender);
+  --chart-5: var(--sky);
+
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.28 0.03 250);
+  --sidebar-primary: oklch(0.72 0.09 150);
+  --sidebar-primary-foreground: oklch(0.99 0.01 150);
+  --sidebar-accent: oklch(0.96 0.015 85);
+  --sidebar-accent-foreground: oklch(0.28 0.03 250);
+  --sidebar-border: oklch(0.92 0.012 85);
+  --sidebar-ring: oklch(0.72 0.09 150);
 }
 
 @layer base {
@@ -137,8 +141,22 @@
     border-color: var(--color-border);
   }
 
-  body {
+  html, body {
+    font-family: var(--font-sans);
     background-color: var(--color-background);
     color: var(--color-foreground);
+    /* Subtle paper grain so the cream never feels flat */
+    background-image:
+      radial-gradient(circle at 15% 10%, color-mix(in oklab, var(--sage) 12%, transparent) 0%, transparent 40%),
+      radial-gradient(circle at 85% 90%, color-mix(in oklab, var(--peach) 12%, transparent) 0%, transparent 45%);
+    background-attachment: fixed;
   }
+}
+
+/* Reusable soft shadow utility — matches the airy reference design */
+@utility shadow-soft {
+  box-shadow: 0 6px 24px -10px rgb(60 60 80 / 0.10), 0 2px 6px -2px rgb(60 60 80 / 0.04);
+}
+@utility shadow-soft-lg {
+  box-shadow: 0 18px 44px -18px rgb(60 60 80 / 0.18), 0 4px 12px -4px rgb(60 60 80 / 0.06);
 }
