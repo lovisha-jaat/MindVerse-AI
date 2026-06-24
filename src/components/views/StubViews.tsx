@@ -4,7 +4,6 @@
  */
 import { Play, Pause, Award, Flame } from "lucide-react";
 import { useState } from "react";
-import bearImg from "@/assets/bear.png";
 import { useMindVerse } from "@/context/MindVerseContext";
 
 /* ─────────── shared frame ─────────── */
@@ -25,64 +24,9 @@ function TabFrame({ kicker, title, blurb, children }: {
 }
 
 /* ─────────── Bear Room ─────────── */
-
-export function BearRoomView() {
-  const { currentMood } = useMindVerse();
-  return (
-    <TabFrame
-      kicker="Companion"
-      title="My Mood Room"
-      blurb="Your safe space to breathe and relax."
-    >
-      {/* Hero scene */}
-      <section className="overflow-hidden rounded-[28px] bg-card p-5 shadow-soft">
-        <div
-          className="relative grid h-64 place-items-center overflow-hidden rounded-[24px]"
-          style={{
-            background: `linear-gradient(160deg, var(--sage-soft), var(--sky-soft) 60%, ${currentMood.color}55)`,
-          }}
-        >
-          {/* Soft sun */}
-          <div className="absolute right-8 top-6 h-16 w-16 rounded-full bg-butter/70 blur-[2px] shadow-[0_0_40px_var(--butter)]" />
-          {/* Floor */}
-          <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-sage-soft to-transparent" />
-          <img
-            src={bearImg}
-            alt="Companion bear in your mood room"
-            width={180}
-            height={180}
-            className="relative z-10 drop-shadow-[0_12px_24px_rgba(120,90,60,0.25)]"
-          />
-        </div>
-        <div className="mt-4 text-center">
-          <p className="text-sm text-muted-foreground">Room Mood</p>
-          <p className="mt-1 text-xl font-bold text-foreground">{currentMood.emoji} {currentMood.label}</p>
-          <p className="mt-1 text-xs text-muted-foreground">Keep going — you're in a good space.</p>
-        </div>
-      </section>
-
-      {/* Quick actions row */}
-      <section className="grid grid-cols-4 gap-3">
-        {[
-          { label: "Breathing",  emoji: "🌬️", sub: "3 min" },
-          { label: "Soundscape", emoji: "🎵", sub: "Rain" },
-          { label: "Journal",    emoji: "✍️", sub: "Write" },
-          { label: "Games",      emoji: "🎮", sub: "Play" },
-        ].map((a) => (
-          <button
-            key={a.label}
-            type="button"
-            className="flex flex-col items-center gap-1 rounded-2xl bg-card p-3 shadow-soft transition hover:-translate-y-0.5"
-          >
-            <span className="text-2xl" aria-hidden>{a.emoji}</span>
-            <span className="text-xs font-semibold text-foreground">{a.label}</span>
-            <span className="text-[10px] text-muted-foreground">{a.sub}</span>
-          </button>
-        ))}
-      </section>
-    </TabFrame>
-  );
-}
+// BearRoomView lives in its own file — re-export keeps the existing
+// `import { BearRoomView } from "./StubViews"` chain in WorkspaceShell working.
+export { BearRoomView } from "./BearRoomView";
 
 /* ─────────── Sounds ─────────── */
 
