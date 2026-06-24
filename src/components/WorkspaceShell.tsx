@@ -10,7 +10,8 @@ import { MuteToggle } from "./MuteToggle";
 import { BottomNav } from "./BottomNav";
 import { useMindVerse } from "@/context/MindVerseContext";
 import { PredictorView } from "./views/PredictorView";
-import { HomeView, BearRoomView, SoundsView, ProfileView } from "./views/StubViews";
+import { HomeView } from "./views/HomeView";
+import { BearRoomView, SoundsView, ProfileView } from "./views/StubViews";
 
 export function WorkspaceShell() {
   const { activeTab, currentMood } = useMindVerse();
