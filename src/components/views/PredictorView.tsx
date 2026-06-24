@@ -34,7 +34,7 @@ import {
 import { Activity, Brain, Moon, MonitorSmartphone, Coffee, HeartPulse, Sparkles } from "lucide-react";
 import { useMindVerse } from "@/context/MindVerseContext";
 import { predictStress, type CaffeineLevel } from "@/lib/stressModel";
-import { MoodJournalCalendar } from "./MoodJournalCalendar";
+import { MoodJournalCalendar } from "@/components/MoodJournalCalendar";
 
 /** Small helper for slider rows so the markup stays scannable below. */
 function SliderRow({
