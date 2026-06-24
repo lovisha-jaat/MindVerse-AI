@@ -4,7 +4,6 @@
  */
 import { Play, Pause, Award, Flame } from "lucide-react";
 import { useState } from "react";
-import bearImg from "@/assets/bear.png";
 import { useMindVerse } from "@/context/MindVerseContext";
 
 /* ─────────── shared frame ─────────── */
