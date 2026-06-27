@@ -182,7 +182,7 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
     heartRate: 72,
     hrvLinked: false,
   });
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
   const [completedMissions, setCompletedMissions] = useState<string[]>([]);
   const [moodJournal, setMoodJournal] = useState<MoodJournalEntry[]>(seedJournal());
   const [gratitudeJournal, setGratitudeJournal] = useState<GratitudeEntry[]>([]);
@@ -248,6 +248,13 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
 
+  // Update audio's muted state when isMuted changes
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.muted = isMuted;
+    }
+  }, [isMuted]);
+
   // Send a single notification
   const sendNotification = useCallback(() => {
     if (typeof window === "undefined" || !("Notification" in window)) return;
@@ -305,11 +312,12 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
     const audio = new Audio(src);
     audio.loop = true;
     audio.volume = 0.7;
+    audio.muted = isMuted;
     audioRef.current = audio;
     currentlyPlayingIdRef.current = id;
     setCurrentlyPlayingSoundId(id);
     audio.play().catch((err) => console.error("Error playing sound:", err));
-  }, []);
+  }, [isMuted]);
   
   const stopSound = useCallback(() => {
     if (audioRef.current) {
