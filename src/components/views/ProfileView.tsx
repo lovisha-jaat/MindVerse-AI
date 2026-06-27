@@ -23,6 +23,7 @@ export function ProfileView() {
     togglePushReminders,
     darkMode,
     toggleDarkMode,
+    logout,
   } = useMindVerse();
 
   const [editingUser, setEditingUser] = useState(false);
@@ -132,6 +133,17 @@ export function ProfileView() {
             onCheckedChange={toggleDarkMode}
           />
         </ul>
+      </section>
+
+      {/* ─── Logout button ─────────────────────────────────────────────── */}
+      <section>
+        <Button
+          variant="destructive"
+          className="w-full justify-center bg-peach hover:bg-peach/90"
+          onClick={logout}
+        >
+          Log Out
+        </Button>
       </section>
     </div>
   );

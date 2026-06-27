@@ -64,6 +64,7 @@ interface MindVerseState {
   // identity / onboarding
   userName: string | null;
   setUserName: (n: string) => void;
+  logout: () => void;
 
   // companion
   companionName: string;
@@ -248,6 +249,44 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
 
+  // Logout function to reset all state
+  const logout = useCallback(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(LS_KEY);
+    }
+    setUserName(null);
+    setCompanionName("Coco");
+    setCurrentMood({
+      label: "Calm",
+      color: "#A8D5BA",
+      emoji: "😌",
+      stressLevel: 34,
+    });
+    setMlInputs({
+      sleepHours: 7,
+      studyHours: 4,
+      screenTime: 5,
+      caffeine: "Medium",
+      heartRate: 72,
+      hrvLinked: false,
+    });
+    setIsMuted(false);
+    setCompletedMissions([]);
+    setMoodJournal(seedJournal());
+    setGratitudeJournal([]);
+    setCustomQuotes([]);
+    setPushReminders(true);
+    setDarkMode(false);
+    setActiveTab("home");
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
+    }
+    currentlyPlayingIdRef.current = null;
+    setCurrentlyPlayingSoundId(null);
+  }, []);
+
   // Update audio's muted state when isMuted changes
   useEffect(() => {
     if (audioRef.current) {
@@ -412,6 +451,7 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
     () => ({
       userName,
       setUserName,
+      logout,
       companionName,
       setCompanionName,
       playSound,
