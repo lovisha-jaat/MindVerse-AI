@@ -30,9 +30,11 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
+import { applyMissionRelief } from "@/lib/recoveryMissions";
 import {
   predictStress,
   tierFromScore,
@@ -52,18 +54,46 @@ export interface MoodJournalEntry {
   stressLevel: number;
 }
 
+interface GratitudeEntry {
+  id: string;
+  date: string;
+  text: string;
+}
+
 interface MindVerseState {
   // identity / onboarding
   userName: string | null;
   setUserName: (n: string) => void;
+
+  // companion
+  companionName: string;
+  setCompanionName: (n: string) => void;
+
+  // global audio manager
+  playSound: (src: string, id: string) => void;
+  stopSound: () => void;
+  currentlyPlayingSoundId: string | null;
 
   // navigation
   activeTab: TabId;
   setActiveTab: (t: TabId) => void;
 
   // mood
+  /** Raw ML-derived mood before mission relief is applied. */
   currentMood: MoodResult;
   setCurrentMood: (m: MoodResult) => void;
+  /**
+   * Mood after Recovery Mission relief weights are subtracted from stress.
+   * HomeView dashboard metrics (Energy / Happiness / Focus) MUST read this
+   * value so checklist toggles immediately move the pastel metric bars.
+   */
+  effectiveMood: MoodResult;
+
+  // settings
+  pushReminders: boolean;
+  togglePushReminders: () => void;
+  darkMode: boolean;
+  toggleDarkMode: () => void;
 
   // ML feature vector
   mlInputs: MlInputs;
@@ -80,6 +110,16 @@ interface MindVerseState {
   // historical journal (used by the Mood Journal calendar in the predictor)
   moodJournal: MoodJournalEntry[];
   logMoodToJournal: (mood: MoodResult) => void;
+
+  // gratitude journal
+  gratitudeJournal: GratitudeEntry[];
+  addGratitudeEntry: (text: string) => void;
+  removeGratitudeEntry: (id: string) => void;
+
+  // custom calm quotes
+  customQuotes: string[];
+  addCustomQuote: (text: string) => void;
+  removeCustomQuote: (index: number) => void;
 }
 
 /** localStorage key namespace — bump the version to invalidate old shapes. */
@@ -109,11 +149,25 @@ function seedJournal(): MoodJournalEntry[] {
   return out;
 }
 
+// Notification reminder messages
+const REMINDER_MESSAGES = [
+  "Hey! Time for a quick mood check-in 🌸",
+  "Don't forget to take a break and breathe 🧘",
+  "How are you feeling today? Let's check in 🦊",
+  "Time to complete your recovery missions ✨",
+  "Take a moment for yourself — you deserve it 💖",
+];
+
 export function MindVerseProvider({ children }: { children: ReactNode }) {
   // --- initial state -------------------------------------------------------
   // We start optimistic: a "Calm" mood at 34% stress matches the spec default.
   const [userName, setUserNameState] = useState<string | null>(null);
+  const [companionName, setCompanionNameState] = useState<string>("Coco");
   const [activeTab, setActiveTab] = useState<TabId>("home");
+  const [currentlyPlayingSoundId, setCurrentlyPlayingSoundId] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const currentlyPlayingIdRef = useRef<string | null>(null);
+  const reminderIntervalRef = useRef<number | null>(null);
   const [currentMood, setCurrentMood] = useState<MoodResult>({
     label: "Calm",
     color: "#A8D5BA",
@@ -130,7 +184,11 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
   });
   const [isMuted, setIsMuted] = useState(true);
   const [completedMissions, setCompletedMissions] = useState<string[]>([]);
-  const [moodJournal, setMoodJournal] = useState<MoodJournalEntry[]>(seedJournal);
+  const [moodJournal, setMoodJournal] = useState<MoodJournalEntry[]>(seedJournal());
+  const [gratitudeJournal, setGratitudeJournal] = useState<GratitudeEntry[]>([]);
+  const [customQuotes, setCustomQuotes] = useState<string[]>([]);
+  const [pushReminders, setPushReminders] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
 
   // --- hydrate from localStorage (client only) -----------------------------
   // We guard with `typeof window` because the provider runs during SSR where
@@ -142,13 +200,20 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
       if (!raw) return;
       const parsed = JSON.parse(raw);
       if (parsed.userName) setUserNameState(parsed.userName);
+      // Always set default to "Coco" if no companionName or it's "Pip" (old default)
+      if (parsed.companionName && parsed.companionName !== "Pip") setCompanionNameState(parsed.companionName);
+      else setCompanionNameState("Coco");
       if (parsed.mlInputs) setMlInputsState((p) => ({ ...p, ...parsed.mlInputs }));
       if (parsed.currentMood) setCurrentMood(parsed.currentMood);
       if (Array.isArray(parsed.completedMissions)) setCompletedMissions(parsed.completedMissions);
       if (Array.isArray(parsed.moodJournal) && parsed.moodJournal.length) {
         setMoodJournal(parsed.moodJournal);
       }
+      if (Array.isArray(parsed.gratitudeJournal)) setGratitudeJournal(parsed.gratitudeJournal);
+      if (Array.isArray(parsed.customQuotes)) setCustomQuotes(parsed.customQuotes);
       if (typeof parsed.isMuted === "boolean") setIsMuted(parsed.isMuted);
+      if (typeof parsed.pushReminders === "boolean") setPushReminders(parsed.pushReminders);
+      if (typeof parsed.darkMode === "boolean") setDarkMode(parsed.darkMode);
     } catch {
       /* swallow — corrupt storage shouldn't break the app */
     }
@@ -159,31 +224,163 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
     if (typeof window === "undefined") return;
     const payload = {
       userName,
+      companionName,
       mlInputs,
       currentMood,
       completedMissions,
       moodJournal,
+      gratitudeJournal,
+      customQuotes,
       isMuted,
+      pushReminders,
+      darkMode,
     };
     try {
       window.localStorage.setItem(LS_KEY, JSON.stringify(payload));
     } catch {
       /* quota exceeded — silently ignore */
     }
-  }, [userName, mlInputs, currentMood, completedMissions, moodJournal, isMuted]);
+  }, [userName, mlInputs, currentMood, completedMissions, moodJournal, isMuted, pushReminders, darkMode]);
+
+  // Apply / remove the `dark` class on <html> when the user toggles dark mode.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.documentElement.classList.toggle("dark", darkMode);
+  }, [darkMode]);
+
+  // Send a single notification
+  const sendNotification = useCallback(() => {
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+    if (Notification.permission !== "granted") return;
+
+    const message = REMINDER_MESSAGES[Math.floor(Math.random() * REMINDER_MESSAGES.length)];
+    new Notification("MindVerse", {
+      body: message,
+      icon: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23A8D5BA'/%3E%3Ctext x='50' y='65' font-size='40' text-anchor='middle' fill='white'%3E🦊%3C/text%3E%3C/svg%3E",
+    });
+  }, []);
+
+  // Start/stop reminders based on pushReminders state
+  useEffect(() => {
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+
+    if (reminderIntervalRef.current) {
+      window.clearInterval(reminderIntervalRef.current);
+      reminderIntervalRef.current = null;
+    }
+
+    if (pushReminders && Notification.permission === "granted") {
+      // Send reminder every 4 hours (4 * 60 * 60 * 1000 ms)
+      reminderIntervalRef.current = window.setInterval(sendNotification, 4 * 60 * 60 * 1000);
+    }
+  }, [pushReminders, sendNotification]);
 
   // --- stable action creators ---------------------------------------------
   const setUserName = useCallback((n: string) => setUserNameState(n.trim() || null), []);
+  const setCompanionName = useCallback((n: string) => setCompanionNameState(n.trim() || "Coco"), []);
   const setMlInputs = useCallback(
     (patch: Partial<MlInputs>) => setMlInputsState((prev) => ({ ...prev, ...patch })),
     [],
   );
+  
+  const playSound = useCallback((src: string, id: string) => {
+    // If we're already playing this sound, stop it
+    if (currentlyPlayingIdRef.current === id) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+      currentlyPlayingIdRef.current = null;
+      setCurrentlyPlayingSoundId(null);
+      return;
+    }
+    
+    // Stop any currently playing sound first
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    
+    // Create new audio element only if we're playing a new sound
+    const audio = new Audio(src);
+    audio.loop = true;
+    audio.volume = 0.7;
+    audioRef.current = audio;
+    currentlyPlayingIdRef.current = id;
+    setCurrentlyPlayingSoundId(id);
+    audio.play().catch((err) => console.error("Error playing sound:", err));
+  }, []);
+  
+  const stopSound = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
+    }
+    currentlyPlayingIdRef.current = null;
+    setCurrentlyPlayingSoundId(null);
+  }, []);
   const toggleMute = useCallback(() => setIsMuted((m) => !m), []);
+  const togglePushReminders = useCallback(async () => {
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      setPushReminders(false);
+      return;
+    }
+
+    if (!pushReminders && Notification.permission === "default") {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        setPushReminders(false);
+        return;
+      }
+    }
+
+    setPushReminders((p) => !p);
+  }, [pushReminders]);
+  const toggleDarkMode = useCallback(() => setDarkMode((d) => !d), []);
+
+  const addGratitudeEntry = useCallback((text: string) => {
+    const newEntry: GratitudeEntry = {
+      id: crypto.randomUUID(),
+      date: new Date().toISOString().slice(0, 10),
+      text: text.trim(),
+    };
+    setGratitudeJournal((prev) => [...prev, newEntry]);
+  }, []);
+
+  const removeGratitudeEntry = useCallback((id: string) => {
+    setGratitudeJournal((prev) => prev.filter((e) => e.id !== id));
+  }, []);
+
+  const addCustomQuote = useCallback((text: string) => {
+    setCustomQuotes((prev) => [...prev, text.trim()]);
+  }, []);
+
+  const removeCustomQuote = useCallback((index: number) => {
+    setCustomQuotes((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  /**
+   * Toggle a Recovery Mission id in `completedMissions`.
+   *
+   * This is the single mutation entry-point for checklist interactions.
+   * We intentionally do NOT adjust `currentMood` here — instead,
+   * `effectiveMood` is derived in the memo below via `applyMissionRelief`,
+   * which sums each mission's `stressRelief` weight and subtracts the total
+   * from the ML stress score. HomeView then maps the lowered stress into
+   * higher Energy / Happiness percentages through `dashboardMetrics.ts`.
+   */
   const toggleMission = useCallback((id: string) => {
     setCompletedMissions((prev) =>
       prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id],
     );
   }, []);
+
+  /** Mission-adjusted mood consumed by dashboard metric subscribers. */
+  const effectiveMood = useMemo(
+    () => applyMissionRelief(currentMood, completedMissions),
+    [currentMood, completedMissions],
+  );
 
   /**
    * Append today's mood to the journal. If today already has an entry we
@@ -207,10 +404,16 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
     () => ({
       userName,
       setUserName,
+      companionName,
+      setCompanionName,
+      playSound,
+      stopSound,
+      currentlyPlayingSoundId,
       activeTab,
       setActiveTab,
       currentMood,
       setCurrentMood,
+      effectiveMood,
       mlInputs,
       setMlInputs,
       isMuted,
@@ -219,15 +422,34 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
       toggleMission,
       moodJournal,
       logMoodToJournal,
+      gratitudeJournal,
+      addGratitudeEntry,
+      removeGratitudeEntry,
+      customQuotes,
+      addCustomQuote,
+      removeCustomQuote,
+      pushReminders,
+      togglePushReminders,
+      darkMode,
+      toggleDarkMode,
     }),
     [
       userName, setUserName,
+      companionName, setCompanionName,
+      playSound,
+      stopSound,
+      currentlyPlayingSoundId,
       activeTab,
       currentMood,
+      effectiveMood,
       mlInputs, setMlInputs,
       isMuted, toggleMute,
       completedMissions, toggleMission,
       moodJournal, logMoodToJournal,
+      gratitudeJournal, addGratitudeEntry, removeGratitudeEntry,
+      customQuotes, addCustomQuote, removeCustomQuote,
+      pushReminders, togglePushReminders,
+      darkMode, toggleDarkMode,
     ],
   );
 

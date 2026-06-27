@@ -12,7 +12,7 @@ import { HomeView } from "./views/HomeView";
 import { BearRoomView, SoundsView, ProfileView } from "./views/StubViews";
 
 export function WorkspaceShell() {
-  const { activeTab, currentMood } = useMindVerse();
+  const { activeTab, effectiveMood } = useMindVerse();
 
   const ActiveView = (() => {
     switch (activeTab) {
@@ -29,7 +29,7 @@ export function WorkspaceShell() {
     <div
       // Expose the live mood color as a CSS variable so any descendant can
       // tint accents via `var(--mood-color)` (e.g. ring stroke, mission bar).
-      style={{ ["--mood-color" as string]: currentMood.color }}
+      style={{ ["--mood-color" as string]: effectiveMood.color }}
       className="relative min-h-screen overflow-x-hidden bg-background text-foreground"
     >
       {/* Soft ambient blobs — extremely faint so the paper feel dominates */}
@@ -38,11 +38,9 @@ export function WorkspaceShell() {
         <div className="absolute right-[-6rem] top-1/3 h-96 w-96 rounded-full bg-peach-soft opacity-60 blur-3xl" />
         <div
           className="absolute left-1/4 bottom-10 h-80 w-80 rounded-full opacity-40 blur-3xl transition-colors duration-700"
-          style={{ backgroundColor: currentMood.color }}
+          style={{ backgroundColor: effectiveMood.color }}
         />
       </div>
-
-      <MuteToggle />
 
       {/* Content well — max-w-2xl reads nicely on tablet, mobile-native on phones */}
       <main className="relative z-10 mx-auto w-full max-w-2xl px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-20">

@@ -1,41 +1,277 @@
-/**
- * SoundsView.tsx
- * -----------------------------------------------------------------------------
- * The "Sounds & Wellness Tools" tab. Three composable surfaces:
- *
- *   1. AmbientSoundGrid  – 2×3 grid of soundscape cards. Tapping a card toggles
- *                          its `playing` state. Only one card may play at a
- *                          time. When the global `isMuted` flag is true we
- *                          force every card into the paused visual state.
- *   2. BreathingCircle   – CSS-driven 4-4-6 breathing pacer. We use a single
- *                          `phase` state ("inhale" | "hold" | "exhale") and let
- *                          the CSS transition duration match the phase length
- *                          so the animation is the timing source of truth.
- *   3. ZenGarden         – HTML <canvas> that renders fading raked-sand
- *                          strokes following pointer / touch input.
- *
- * Mood-reactive accents come from `currentMood.color` injected as inline
- * style (`--mood-color`) on the local container.
- */
-
 import { useEffect, useRef, useState } from "react";
-import { Pause, Play, VolumeX } from "lucide-react";
+import { Pause, Play, ChevronRight, RefreshCw, Volume2 } from "lucide-react";
 import { useMindVerse } from "@/context/MindVerseContext";
 
-/* ───────────────────────── Sound catalogue ─────────────────────────────── */
-// Spec-mandated 6 entries laid out as a 2 columns × 3 rows responsive grid.
-const SOUNDS = [
-  { id: "rain",   label: "Rain",   emoji: "🌧",  tone: "var(--sky-soft)" },
-  { id: "ocean",  label: "Ocean",  emoji: "🌊",  tone: "var(--sky-soft)" },
-  { id: "forest", label: "Forest", emoji: "🌲",  tone: "var(--sage-soft)" },
-  { id: "cafe",   label: "Cafe",   emoji: "☕",  tone: "var(--butter-soft)" },
-  { id: "piano",  label: "Piano",  emoji: "🎹",  tone: "var(--lavender-soft)" },
-  { id: "sleep",  label: "Sleep",  emoji: "🌙",  tone: "var(--peach-soft)" },
-] as const;
+type Question = {
+  id: string;
+  text: string;
+  options: {
+    text: string;
+    value: string;
+  }[];
+};
 
-/* ───────────────────────── Tab frame helper ────────────────────────────── */
+const QUESTIONS: Question[] = [
+  {
+    id: "mood",
+    text: "How are you feeling right now?",
+    options: [
+      { text: "Stressed/Anxious", value: "stressed" },
+      { text: "Tired/Sleepy", value: "tired" },
+      { text: "Unable to Focus", value: "unfocused" },
+      { text: "Sad/Low", value: "sad" },
+      { text: "Calm/Relaxed", value: "calm" },
+    ],
+  },
+  {
+    id: "energy",
+    text: "What's your energy level?",
+    options: [
+      { text: "Very Low", value: "very-low" },
+      { text: "Low", value: "low" },
+      { text: "Medium", value: "medium" },
+      { text: "High", value: "high" },
+      { text: "Very High", value: "very-high" },
+    ],
+  },
+  {
+    id: "goal",
+    text: "What do you want to achieve?",
+    options: [
+      { text: "Relax & Reduce Stress", value: "relax" },
+      { text: "Improve Focus", value: "focus" },
+      { text: "Boost Energy", value: "energy" },
+      { text: "Sleep Better", value: "sleep" },
+      { text: "Elevate Mood", value: "mood" },
+    ],
+  },
+];
+
+type FrequencySound = {
+  id: string;
+  name: string;
+  description: string;
+  emoji: string;
+  color: string;
+  src: string;
+};
+
+const FREQUENCY_SOUNDS: FrequencySound[] = [
+  {
+    id: "delta",
+    name: "Delta Waves",
+    description: "Deep relaxation and sleep (0.5-4 Hz)",
+    emoji: "🌙",
+    color: "#8e7cc3",
+    src: "/sounds/delta_0.5_4.mp3",
+  },
+  {
+    id: "theta",
+    name: "Theta Waves",
+    description: "Deep relaxation, meditation, creativity (4-8 Hz)",
+    emoji: "🧘",
+    color: "#674ea7",
+    src: "/sounds/theta_4_8.mp3",
+  },
+  {
+    id: "alpha",
+    name: "Alpha Waves",
+    description: "Relaxed alertness, calm focus (8-13 Hz)",
+    emoji: "🧠",
+    color: "#3d85c6",
+    src: "/sounds/alpha_8_13.mp3",
+  },
+  {
+    id: "174hz",
+    name: "174 Hz",
+    description: "Pain relief and relaxation",
+    emoji: "💆",
+    color: "#9900ff",
+    src: "/sounds/174hz.mp3",
+  },
+  {
+    id: "396hz",
+    name: "396 Hz",
+    description: "Liberation from fear and guilt",
+    emoji: "❤️",
+    color: "#cc4125",
+    src: "/sounds/396hzoverthinking.mp3",
+  },
+  {
+    id: "417hz",
+    name: "417 Hz",
+    description: "Facilitating change and breaking patterns",
+    emoji: "✨",
+    color: "#e06666",
+    src: "/sounds/417hz.mp3",
+  },
+  {
+    id: "432hz",
+    name: "432 Hz",
+    description: "Harmonizing, calming tone",
+    emoji: "🎵",
+    color: "#f1c232",
+    src: "/sounds/432hz.mp3",
+  },
+  {
+    id: "528hz",
+    name: "528 Hz",
+    description: "Love frequency, healing, DNA repair",
+    emoji: "💚",
+    color: "#6aa84f",
+    src: "/sounds/528hz.mp3",
+  },
+  {
+    id: "639hz",
+    name: "639 Hz",
+    description: "Healing and balancing relationships",
+    emoji: "🤍",
+    color: "#3d85c6",
+    src: "/sounds/639_heal_balance.mp3",
+  },
+  {
+    id: "852hz",
+    name: "852 Hz",
+    description: "Returning to spiritual order",
+    emoji: "🙏",
+    color: "#674ea7",
+    src: "/sounds/852hz.mp3",
+  },
+];
+
+type AmbientSound = {
+  id: string;
+  name: string;
+  emoji: string;
+  tone: string;
+  src: string;
+};
+
+const AMBIENT_SOUNDS: AmbientSound[] = [
+  { 
+    id: "sweet-sound", 
+    name: "Sweet Sound", 
+    emoji: "✨", 
+    tone: "var(--lavender-soft)", 
+    src: "/sounds/Sweet_sound.mp3" 
+  },
+  { 
+    id: "bird-river", 
+    name: "Birds with River", 
+    emoji: "🦜🌊", 
+    tone: "var(--sky-soft)", 
+    src: "/sounds/bird_chirping_with_river.wav" 
+  },
+  { 
+    id: "birds", 
+    name: "Birds Chirping", 
+    emoji: "🐦", 
+    tone: "var(--sage-soft)", 
+    src: "/sounds/birds_chirping_sound.wav" 
+  },
+  { 
+    id: "meditation", 
+    name: "Meditation", 
+    emoji: "🧘", 
+    tone: "var(--peach-soft)", 
+    src: "/sounds/meditation_sound.mp3" 
+  },
+  { 
+    id: "river", 
+    name: "River", 
+    emoji: "🏞️", 
+    tone: "var(--sky-soft)", 
+    src: "/sounds/river_sound.mp3" 
+  },
+  { 
+    id: "rest", 
+    name: "Sound for Rest", 
+    emoji: "😌", 
+    tone: "var(--butter-soft)", 
+    src: "/sounds/sound_for_rest.mp3" 
+  },
+  { 
+    id: "piano", 
+    name: "Sweet Piano", 
+    emoji: "🎹", 
+    tone: "var(--lavender-soft)", 
+    src: "/sounds/sweet_piano_sound.mp3" 
+  },
+  { 
+    id: "travelling", 
+    name: "Travelling", 
+    emoji: "✈️", 
+    tone: "var(--sage-soft)", 
+    src: "/sounds/travelling_sound.mp3" 
+  },
+  { 
+    id: "woodwind", 
+    name: "Woodwind Instrument", 
+    emoji: "🎵", 
+    tone: "var(--peach-soft)", 
+    src: "/sounds/woodwind_instrument.mp3" 
+  },
+];
+
+function AmbientSoundGrid({ moodColor }: { moodColor: string }) {
+  const { isMuted, playSound: globalPlaySound, currentlyPlayingSoundId } = useMindVerse();
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 gap-3">
+        {AMBIENT_SOUNDS.map((sound) => {
+          const active = currentlyPlayingSoundId === sound.id && !isMuted;
+          return (
+            <button
+              key={sound.id}
+              type="button"
+              onClick={() => globalPlaySound(sound.src, sound.id)}
+              className="group relative overflow-hidden rounded-2xl p-4 text-left shadow-soft transition-all duration-300 ease-out hover:-translate-y-0.5"
+              style={{
+                background: sound.tone,
+                boxShadow: active ? `0 0 0 2px ${moodColor}, 0 12px 30px -10px ${moodColor}aa` : undefined,
+                transform: active ? "scale(1.02)" : undefined,
+              }}
+            >
+              {active && (
+                <>
+                  <div
+                    className="pointer-events-none absolute inset-0 rounded-2xl"
+                    style={{
+                      animation: "soundRipple 2.4s ease-out infinite",
+                      border: `2px solid ${moodColor}`,
+                    }}
+                  />
+                  <div
+                    className="pointer-events-none absolute inset-0 rounded-2xl"
+                    style={{
+                      animation: "soundRipple 2.4s ease-out 1.2s infinite",
+                      border: `2px solid ${moodColor}`,
+                    }}
+                  />
+                </>
+              )}
+              <div className="text-3xl" aria-hidden>{sound.emoji}</div>
+              <p className="mt-6 text-sm font-bold text-foreground">{sound.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {active ? "Playing…" : "Tap to play"}
+              </p>
+              <span className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white text-foreground shadow-soft">
+                {active ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function TabFrame({ kicker, title, blurb, children }: {
-  kicker: string; title: string; blurb: string; children: React.ReactNode;
+  kicker: string;
+  title: string;
+  blurb: string;
+  children: React.ReactNode;
 }) {
   return (
     <div className="space-y-6">
@@ -49,110 +285,199 @@ function TabFrame({ kicker, title, blurb, children }: {
   );
 }
 
-/* =========================================================================
- * AMBIENT SOUND GRID
- * ========================================================================= */
-function AmbientSoundGrid({ moodColor }: { moodColor: string }) {
-  const { isMuted, toggleMute } = useMindVerse();
-  // `playing` is the ID of the currently active card, or null.
-  const [playing, setPlaying] = useState<string | null>(null);
+function Questionnaire({ onComplete }: { onComplete: (sound: FrequencySound) => void }) {
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
 
-  // Toggle handler — also unmutes the global audio bus when the user
-  // explicitly starts a soundscape (otherwise the visuals would lie).
-  const handleTap = (id: string) => {
-    setPlaying((prev) => (prev === id ? null : id));
-    if (isMuted) toggleMute();
+  const handleAnswer = (value: string) => {
+    const newAnswers = { ...answers, [QUESTIONS[currentQuestion].id]: value };
+    setAnswers(newAnswers);
+
+    if (currentQuestion < QUESTIONS.length - 1) {
+      setCurrentQuestion(currentQuestion + 1);
+    } else {
+      let suggestedSound = FREQUENCY_SOUNDS.find(p => p.id === "alpha")!;
+
+      const mood = newAnswers.mood;
+      const goal = newAnswers.goal;
+      const energy = newAnswers.energy;
+
+      if (goal === "sleep" || mood === "tired") {
+        suggestedSound = FREQUENCY_SOUNDS.find(p => p.id === "delta")!;
+      } else if (goal === "relax" || mood === "stressed") {
+        suggestedSound = FREQUENCY_SOUNDS.find(p => p.id === "theta")!;
+      } else if (goal === "focus" || mood === "unfocused") {
+        suggestedSound = FREQUENCY_SOUNDS.find(p => p.id === "alpha")!;
+      } else if (goal === "energy" || energy === "low" || energy === "very-low") {
+        suggestedSound = FREQUENCY_SOUNDS.find(p => p.id === "417hz")!;
+      } else if (goal === "mood" || mood === "sad") {
+        suggestedSound = FREQUENCY_SOUNDS.find(p => p.id === "528hz")!;
+      }
+
+      onComplete(suggestedSound);
+    }
   };
 
   return (
-    <section className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="font-display text-lg font-bold text-foreground">Ambient Soundscapes</h2>
-        {isMuted && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-card px-2 py-1 text-[10px] font-semibold text-muted-foreground shadow-soft">
-            <VolumeX className="h-3 w-3" /> muted globally
-          </span>
-        )}
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <div className="flex gap-2">
+          {QUESTIONS.map((_, idx) => {
+            let barClass = "h-2 flex-1 rounded-full transition-all bg-gray-200";
+            if (idx <= currentQuestion) {
+              barClass = "h-2 flex-1 rounded-full transition-all bg-sage";
+            }
+            return <div key={idx} className={barClass} />;
+          })}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Question {currentQuestion + 1} of {QUESTIONS.length}
+        </p>
       </div>
 
-      {/* 2 columns × 3 rows on every breakpoint — the spec is explicit. */}
-      <div className="grid grid-cols-2 gap-3">
-        {SOUNDS.map((s) => {
-          // A card is visually "active" only when it is the selected sound
-          // AND the global audio bus is not muted. This keeps the UI honest
-          // with respect to what the user can actually hear.
-          const active = playing === s.id && !isMuted;
-          return (
+      <div className="space-y-4">
+        <h2 className="font-display text-xl font-bold text-foreground">
+          {QUESTIONS[currentQuestion].text}
+        </h2>
+
+        <div className="space-y-3">
+          {QUESTIONS[currentQuestion].options.map((option) => (
             <button
-              key={s.id}
-              type="button"
-              onClick={() => handleTap(s.id)}
-              aria-pressed={active}
-              className={[
-                "group relative overflow-hidden rounded-[24px] p-4 text-left",
-                "shadow-soft transition-all duration-300 ease-out",
-                // `scale-[1.02]` per spec — a subtle "lift" when active.
-                active ? "scale-[1.02]" : "hover:-translate-y-0.5",
-              ].join(" ")}
-              style={{
-                background: s.tone,
-                // Mood-coloured glowing border ring, only when active.
-                boxShadow: active
-                  ? `0 0 0 2px ${moodColor}, 0 12px 30px -10px ${moodColor}aa`
-                  : undefined,
-              }}
+              key={option.value}
+              onClick={() => handleAnswer(option.value)}
+              className="w-full text-left p-4 rounded-2xl bg-card border border-border hover:border-sage hover:shadow-soft transition-all group"
             >
-              {/* Animated ripple — pure CSS keyframes defined below. */}
-              {active && (
-                <>
-                  <span
-                    className="pointer-events-none absolute inset-0 rounded-[24px]"
-                    style={{
-                      animation: "soundRipple 2.4s ease-out infinite",
-                      border: `2px solid ${moodColor}`,
-                    }}
-                  />
-                  <span
-                    className="pointer-events-none absolute inset-0 rounded-[24px]"
-                    style={{
-                      animation: "soundRipple 2.4s ease-out 1.2s infinite",
-                      border: `2px solid ${moodColor}`,
-                    }}
-                  />
-                </>
-              )}
-
-              <div className="text-3xl" aria-hidden>{s.emoji}</div>
-              <p className="mt-6 text-sm font-bold text-foreground">{s.label}</p>
-              <p className="text-[11px] text-muted-foreground">
-                {active ? "Playing…" : "Tap to play"}
-              </p>
-
-              <span className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white text-foreground shadow-soft">
-                {active ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="font-medium">{option.text}</span>
+                <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-sage transition-colors" />
+              </div>
             </button>
-          );
-        })}
+          ))}
+        </div>
       </div>
-    </section>
+
+      {currentQuestion > 0 && (
+        <button
+          onClick={() => setCurrentQuestion(currentQuestion - 1)}
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          ← Back
+        </button>
+      )}
+    </div>
   );
 }
 
-/* =========================================================================
- * BREATHING CIRCLE
- *
- * Phase machine:
- *   inhale (4s) → hold (4s) → exhale (6s) → inhale …
- *
- * The CSS transition `duration` is set per phase so the visual easing
- * naturally lasts the full duration of the phase. We rely on a single
- * setTimeout cascade (cleaned up on unmount or `running` toggle).
- * ========================================================================= */
+function FrequencyPlayer({ initialSound, onReset }: {
+  initialSound: FrequencySound;
+  onReset: () => void;
+}) {
+  const { isMuted, playSound: globalPlaySound, currentlyPlayingSoundId, currentMood } = useMindVerse();
+  const [currentSound, setCurrentSound] = useState(initialSound);
+
+  const active = currentlyPlayingSoundId === currentSound.id && !isMuted;
+
+  return (
+    <div className="space-y-6">
+      <div
+        className="rounded-2xl p-6 text-center"
+        style={{
+          backgroundColor: currentSound.color + "20",
+          borderLeft: `4px solid ${currentSound.color}`,
+        }}
+      >
+        <div className="text-5xl mb-4">{currentSound.emoji}</div>
+        <h2
+          className="font-display text-2xl font-bold text-foreground"
+          style={{ color: currentSound.color }}
+        >
+          {currentSound.name}
+        </h2>
+        <p className="text-muted-foreground mt-2">{currentSound.description}</p>
+      </div>
+
+      <div className="flex justify-center">
+        <button
+          onClick={() => globalPlaySound(currentSound.src, currentSound.id)}
+          className="w-24 h-24 rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+          style={{ backgroundColor: currentSound.color }}
+        >
+          {active ? (
+            <Pause className="w-10 h-10 text-white" />
+          ) : (
+            <Play className="w-10 h-10 text-white ml-1" />
+          )}
+        </button>
+      </div>
+
+      <div className="space-y-4">
+        <h3 className="font-display text-lg font-bold text-foreground">
+          All Frequencies
+        </h3>
+        <div className="grid grid-cols-2 gap-3">
+          {FREQUENCY_SOUNDS.map((sound) => {
+            const isActive = currentlyPlayingSoundId === sound.id && !isMuted;
+            return (
+              <button
+                key={sound.id}
+                onClick={() => {
+                  setCurrentSound(sound);
+                  globalPlaySound(sound.src, sound.id);
+                }}
+                className="group relative overflow-hidden rounded-2xl p-4 text-left shadow-soft transition-all duration-300 ease-out hover:-translate-y-0.5"
+                style={{
+                  background: sound.color + "15",
+                  boxShadow: isActive ? `0 0 0 2px ${currentMood.color}, 0 12px 30px -10px ${currentMood.color}aa` : undefined,
+                  transform: isActive ? "scale(1.02)" : undefined,
+                }}
+              >
+                {isActive && (
+                  <>
+                    <div
+                      className="pointer-events-none absolute inset-0 rounded-2xl"
+                      style={{
+                        animation: "soundRipple 2.4s ease-out infinite",
+                        border: `2px solid ${currentMood.color}`,
+                      }}
+                    />
+                    <div
+                      className="pointer-events-none absolute inset-0 rounded-2xl"
+                      style={{
+                        animation: "soundRipple 2.4s ease-out 1.2s infinite",
+                        border: `2px solid ${currentMood.color}`,
+                      }}
+                    />
+                  </>
+                )}
+                <div className="text-2xl" aria-hidden>{sound.emoji}</div>
+                <p className="mt-4 text-sm font-bold text-foreground">{sound.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {isActive ? "Playing…" : "Tap to play"}
+                </p>
+                <span className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white text-foreground shadow-soft">
+                  {isActive ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <button
+        onClick={onReset}
+        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+      >
+        <RefreshCw className="w-4 h-4" />
+        Take Questionnaire
+      </button>
+    </div>
+  );
+}
+
 type Phase = "inhale" | "hold" | "exhale";
 const PHASES: Record<Phase, { ms: number; next: Phase; label: string; scale: number }> = {
-  inhale: { ms: 4000, next: "hold",   label: "Inhale", scale: 1.0 },
-  hold:   { ms: 4000, next: "exhale", label: "Hold",   scale: 1.0 },
+  inhale: { ms: 4000, next: "hold", label: "Inhale", scale: 1.0 },
+  hold: { ms: 4000, next: "exhale", label: "Hold", scale: 1.0 },
   exhale: { ms: 6000, next: "inhale", label: "Exhale", scale: 0.55 },
 };
 
@@ -160,9 +485,6 @@ function BreathingCircle({ moodColor }: { moodColor: string }) {
   const [running, setRunning] = useState(false);
   const [phase, setPhase] = useState<Phase>("inhale");
 
-  // The phase scheduler. We re-run the effect whenever the phase or running
-  // flag changes — the timeout transitions to the *next* phase, which then
-  // schedules the one after that, and so on.
   useEffect(() => {
     if (!running) return;
     const conf = PHASES[phase];
@@ -171,17 +493,14 @@ function BreathingCircle({ moodColor }: { moodColor: string }) {
   }, [phase, running]);
 
   const conf = PHASES[phase];
-  // For the "hold" phase we keep the inhaled scale (1.0). We compute the
-  // visual scale from a base of 0.55 so the contracted circle is small but
-  // still legible at typical mobile sizes (~120px).
   const scale = running ? conf.scale : 0.7;
 
   return (
-    <section className="rounded-[28px] bg-card p-6 shadow-soft">
+    <section className="rounded-2xl bg-card p-6 shadow-soft">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-display text-lg font-bold text-foreground">Breathing Circle</h2>
-          <p className="text-xs text-muted-foreground">4·4·6 box-style pacer</p>
+          <h3 className="font-display text-lg font-bold text-foreground">Breathing Circle</h3>
+          <p className="text-xs text-muted-foreground">4-4-6 box-style pacer</p>
         </div>
         <button
           type="button"
@@ -194,9 +513,7 @@ function BreathingCircle({ moodColor }: { moodColor: string }) {
           {running ? "Stop" : "Start"}
         </button>
       </div>
-
       <div className="relative mx-auto mt-6 grid h-[260px] w-[260px] place-items-center">
-        {/* Soft halo — pulses subtly during the hold phase only. */}
         <span
           className="absolute h-full w-full rounded-full opacity-50 blur-2xl"
           style={{
@@ -204,8 +521,6 @@ function BreathingCircle({ moodColor }: { moodColor: string }) {
             animation: running && phase === "hold" ? "breathHoldPulse 2s ease-in-out infinite" : undefined,
           }}
         />
-        {/* The breathing orb. The transition duration matches the phase
-            length so a phase change triggers a perfectly-timed tween. */}
         <span
           className="relative grid h-full w-full place-items-center rounded-full text-foreground"
           style={{
@@ -227,33 +542,17 @@ function BreathingCircle({ moodColor }: { moodColor: string }) {
   );
 }
 
-/* =========================================================================
- * ZEN GARDEN — pointer-trail canvas
- *
- * Implementation notes:
- *  - We keep a `strokes` ref containing every active line segment along with
- *    its birth timestamp. Each animation frame:
- *      1. Compute `age = now - segment.bornAt`.
- *      2. Derive `alpha = 1 - age / LIFETIME`; drop segments past lifetime.
- *      3. Clear the canvas and redraw each segment with its current alpha.
- *  - DPR-aware: we multiply the backing-store size by `devicePixelRatio`
- *    so strokes stay crisp on retina displays without re-scaling on resize.
- *  - Pointer events handle mouse + touch in a single unified path.
- * ========================================================================= */
 interface Segment {
   x1: number; y1: number; x2: number; y2: number; bornAt: number;
 }
-const STROKE_LIFETIME_MS = 4500; // total fade duration
+const STROKE_LIFETIME_MS = 4500;
 
 function ZenGarden({ moodColor }: { moodColor: string }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const strokesRef = useRef<Segment[]>([]);
-  // Last pointer coordinate, used to draw a continuous line from frame to
-  // frame instead of disconnected dots. Reset to null on pointer-up.
   const lastPtRef = useRef<{ x: number; y: number } | null>(null);
   const rafRef = useRef<number | null>(null);
 
-  // ---- canvas sizing (DPR aware, runs once + on resize) -----------------
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -263,7 +562,6 @@ function ZenGarden({ moodColor }: { moodColor: string }) {
       canvas.width = Math.round(rect.width * dpr);
       canvas.height = Math.round(rect.height * dpr);
       const ctx = canvas.getContext("2d");
-      // setTransform avoids compounding scale on resize.
       ctx?.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
     resize();
@@ -271,7 +569,6 @@ function ZenGarden({ moodColor }: { moodColor: string }) {
     return () => window.removeEventListener("resize", resize);
   }, []);
 
-  // ---- render loop ------------------------------------------------------
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
@@ -280,22 +577,14 @@ function ZenGarden({ moodColor }: { moodColor: string }) {
     const loop = () => {
       const now = performance.now();
       const rect = canvas.getBoundingClientRect();
-      // Soft beige sand base — redrawn each frame so old strokes can fade.
       ctx.clearRect(0, 0, rect.width, rect.height);
-
-      // Filter out any strokes whose lifetime has elapsed. We mutate the ref
-      // in-place to avoid React re-renders 60×/sec.
-      strokesRef.current = strokesRef.current.filter(
-        (s) => now - s.bornAt < STROKE_LIFETIME_MS,
-      );
-
-      // Draw remaining strokes with linearly-decaying alpha.
+      strokesRef.current = strokesRef.current.filter((s) => now - s.bornAt < STROKE_LIFETIME_MS);
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
       for (const seg of strokesRef.current) {
         const age = now - seg.bornAt;
         const alpha = Math.max(0, 1 - age / STROKE_LIFETIME_MS);
-        ctx.strokeStyle = withAlpha(moodColor, alpha * 0.85);
+        ctx.strokeStyle = `rgba(0,0,0,${alpha * 0.2})`;
         ctx.lineWidth = 4;
         ctx.beginPath();
         ctx.moveTo(seg.x1, seg.y1);
@@ -310,9 +599,6 @@ function ZenGarden({ moodColor }: { moodColor: string }) {
     };
   }, [moodColor]);
 
-  // ---- pointer handlers -------------------------------------------------
-  // Convert a pointer event into canvas-local coordinates. We subtract the
-  // canvas bounding rect so the math is independent of page scroll.
   const toLocal = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
@@ -325,11 +611,9 @@ function ZenGarden({ moodColor }: { moodColor: string }) {
   const onMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!lastPtRef.current) return;
     const next = toLocal(e);
-    // Push a new segment from the last point to the current point, stamped
-    // with the current time for fade computation.
     strokesRef.current.push({
       x1: lastPtRef.current.x, y1: lastPtRef.current.y,
-      x2: next.x,              y2: next.y,
+      x2: next.x, y2: next.y,
       bornAt: performance.now(),
     });
     lastPtRef.current = next;
@@ -337,28 +621,27 @@ function ZenGarden({ moodColor }: { moodColor: string }) {
   const onUp = () => { lastPtRef.current = null; };
 
   return (
-    <section className="rounded-[28px] bg-card p-5 shadow-soft">
+    <section className="rounded-2xl bg-card p-5 shadow-soft">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-display text-lg font-bold text-foreground">Zen Garden</h2>
+          <h3 className="font-display text-lg font-bold text-foreground">Zen Garden</h3>
           <p className="text-xs text-muted-foreground">Drag your finger to rake the sand.</p>
         </div>
         <button
           type="button"
           onClick={() => { strokesRef.current = []; }}
-          className="rounded-full bg-sage-soft px-3 py-1 text-[11px] font-bold text-foreground shadow-soft"
+          className="rounded-full bg-sage-soft px-3 py-1 text-xs font-bold text-foreground shadow-soft"
         >
           Smooth sand
         </button>
       </div>
-
       <canvas
         ref={canvasRef}
         onPointerDown={onDown}
         onPointerMove={onMove}
         onPointerUp={onUp}
         onPointerLeave={onUp}
-        className="mt-4 block h-[220px] w-full touch-none rounded-2xl"
+        className="mt-4 block h-[220px] w-full touch-none rounded-xl"
         style={{
           background:
             "radial-gradient(circle at 30% 20%, #fdf5e6 0%, #f1e3c8 70%, #e6d3b0 100%)",
@@ -369,47 +652,90 @@ function ZenGarden({ moodColor }: { moodColor: string }) {
   );
 }
 
-/* Helper: convert "#RRGGBB" → "rgba(r,g,b,a)". Lets us animate alpha
-   without restating the mood hue everywhere. */
-function withAlpha(hex: string, alpha: number) {
-  const clean = hex.replace("#", "");
-  const r = parseInt(clean.substring(0, 2), 16);
-  const g = parseInt(clean.substring(2, 4), 16);
-  const b = parseInt(clean.substring(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
-/* =========================================================================
- * Local keyframes — scoped via a <style> tag so we don't touch the global
- * design system. Tailwind v4's `@theme` setup is for tokens, not animations.
- * ========================================================================= */
-const LOCAL_CSS = `
-  @keyframes soundRipple {
-    0%   { transform: scale(1);    opacity: 0.55; }
-    100% { transform: scale(1.18); opacity: 0;    }
-  }
-  @keyframes breathHoldPulse {
-    0%, 100% { transform: scale(1);    opacity: 0.45; }
-    50%      { transform: scale(1.05); opacity: 0.65; }
-  }
-`;
-
-/* =========================================================================
- * Public export
- * ========================================================================= */
 export function SoundsView() {
   const { currentMood } = useMindVerse();
+  const [activeTab, setActiveTab] = useState<"ambient" | "frequencies">("ambient");
+  const [frequencyScreen, setFrequencyScreen] = useState<"questionnaire" | "direct">("direct");
+  const [suggestedSound, setSuggestedSound] = useState<FrequencySound>(FREQUENCY_SOUNDS[0]);
+
+  const handleQuestionnaireComplete = (sound: FrequencySound) => {
+    setSuggestedSound(sound);
+    setFrequencyScreen("direct");
+  };
+
   return (
     <>
-      <style>{LOCAL_CSS}</style>
+      <style>{`
+        @keyframes soundRipple {
+          0%   { transform: scale(1);    opacity: 0.55; }
+          100% { transform: scale(1.18); opacity: 0;    }
+        }
+        @keyframes breathHoldPulse {
+          0%, 100% { transform: scale(1);    opacity: 0.45; }
+          50%      { transform: scale(1.05); opacity: 0.65; }
+        }
+      `}</style>
       <TabFrame
-        kicker="Soundscape"
+        kicker="Sound Therapy"
         title="Sounds & Wellness"
-        blurb="Ambient mixes, paced breathing, and a zen garden to calm the mind."
+        blurb="Ambient mixes, binaural beats, and wellness tools."
       >
-        <AmbientSoundGrid moodColor={currentMood.color} />
-        <BreathingCircle moodColor={currentMood.color} />
-        <ZenGarden moodColor={currentMood.color} />
+        <div className="flex gap-2 mb-6">
+          <button
+            onClick={() => setActiveTab("ambient")}
+            className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all ${
+              activeTab === "ambient" ? "bg-sage text-white" : "bg-card text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <Volume2 className="w-4 h-4" />
+              Ambient
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab("frequencies")}
+            className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all ${
+              activeTab === "frequencies" ? "bg-sage text-white" : "bg-card text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <Play className="w-4 h-4" />
+              Frequencies
+            </div>
+          </button>
+        </div>
+
+        {activeTab === "ambient" ? (
+          <div className="space-y-6">
+            <AmbientSoundGrid moodColor={currentMood.color} />
+            <BreathingCircle moodColor={currentMood.color} />
+            <ZenGarden moodColor={currentMood.color} />
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {frequencyScreen === "questionnaire" && (
+              <Questionnaire onComplete={handleQuestionnaireComplete} />
+            )}
+            <div className="space-y-4">
+              {frequencyScreen === "questionnaire" && (
+                <button
+                  onClick={() => setFrequencyScreen("direct")}
+                  className="w-full text-sm text-muted-foreground hover:text-foreground text-center"
+                >
+                  Or skip the questionnaire and browse all frequencies directly
+                </button>
+              )}
+              {frequencyScreen === "direct" && (
+                <>
+                  <FrequencyPlayer
+                    initialSound={suggestedSound}
+                    onReset={() => setFrequencyScreen("questionnaire")}
+                  />
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </TabFrame>
     </>
   );

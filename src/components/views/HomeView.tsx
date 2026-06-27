@@ -6,14 +6,25 @@
  * sparklines, an "AI Companion" bear card, and a Today's Mission tracker.
  *
  * Data is *all* derived from the global MindVerse context:
- *   currentMood.stressLevel  → ring %, mission bar tint, hero card mood color
- *   completedMissions        → mission checklist + daily progress
- *   userName                 → personalized greeting (client-only to avoid SSR mismatch)
+ *   effectiveMood.stressLevel → ring %, metric bars (mission relief applied)
+ *   completedMissions         → Recovery Missions checklist + progress ring
+ *   userName                    → personalized greeting (client-only to avoid SSR mismatch)
+ *
+ * Mission → dashboard pipeline:
+ *   Checklist toggles update `completedMissions` in context, which recomputes
+ *   `effectiveMood` (lower stress). Energy / Happiness / Focus bars read that
+ *   adjusted stress via helpers in `lib/dashboardMetrics.ts`.
  */
 import { useEffect, useState } from "react";
-import { ArrowRight, Bell, Sparkles, Check } from "lucide-react";
+import { ArrowRight, Bell } from "lucide-react";
 import bearImg from "@/assets/bear.png";
+import { RecoveryMissionsChecklist } from "@/components/RecoveryMissionsChecklist";
 import { useMindVerse } from "@/context/MindVerseContext";
+import {
+  energyFromStress,
+  happinessFromStress,
+  focusFromStress,
+} from "@/lib/dashboardMetrics";
 
 /* ─────────────── helpers ──────────────────────────────────────────────── */
 
@@ -27,10 +38,7 @@ function greetingFor(date: Date): string {
   return "Good Night";
 }
 
-// Inverse score helpers — keeps the three numbers narratively consistent.
-const energyFromStress    = (s: number) => Math.max(0, Math.min(100, Math.round(100 - s * 0.9)));
-const happinessFromStress = (s: number) => Math.max(0, Math.min(100, Math.round(100 - s * 1.05)));
-const focusFromStress     = (s: number) => Math.max(0, Math.min(100, Math.round(95 - s * 0.7)));
+// Inverse score helpers live in lib/dashboardMetrics.ts — imported above.
 
 /* ─────────────── hero stress ring ─────────────────────────────────────── */
 
@@ -96,23 +104,13 @@ function Sparkline({ color, seed = 0 }: { color: string; seed?: number }) {
 
 /* ─────────────── main view ────────────────────────────────────────────── */
 
-const STARTER_MISSIONS = [
-  { id: "water",     label: "Drink 2L Water" },
-  { id: "walk",      label: "10 Min Walk" },
-  { id: "breath",    label: "Breathing Exercise" },
-  { id: "sleep",     label: "Sleep before 11 PM" },
-];
 
 export function HomeView() {
-  const { userName, currentMood, completedMissions, toggleMission, setActiveTab } = useMindVerse();
+  const { userName, effectiveMood, setActiveTab } = useMindVerse();
 
-  const energy    = energyFromStress(currentMood.stressLevel);
-  const happiness = happinessFromStress(currentMood.stressLevel);
-  const focus     = focusFromStress(currentMood.stressLevel);
-
-  const missionsTotal = STARTER_MISSIONS.length;
-  const missionsDone  = STARTER_MISSIONS.filter((m) => completedMissions.includes(m.id)).length;
-  const missionsPct   = (missionsDone / missionsTotal) * 100;
+  const energy    = energyFromStress(effectiveMood.stressLevel);
+  const happiness = happinessFromStress(effectiveMood.stressLevel);
+  const focus     = focusFromStress(effectiveMood.stressLevel);
 
   // Greeting depends on the local clock — only know it client-side, so we
   // render a stable placeholder on first paint to avoid React hydration
@@ -148,10 +146,10 @@ export function HomeView() {
         <article className="sm:col-span-2 rounded-[28px] bg-peach-soft p-5 shadow-soft">
           <p className="text-xs font-semibold uppercase tracking-wider text-foreground/70">Stress Level</p>
           <div className="mt-4 flex justify-center">
-            <StressRing value={currentMood.stressLevel} color={currentMood.color} />
+            <StressRing value={effectiveMood.stressLevel} color={effectiveMood.color} />
           </div>
           <p className="mt-3 text-center text-sm font-semibold text-foreground/80">
-            {currentMood.emoji} {currentMood.label}
+            {effectiveMood.emoji} {effectiveMood.label}
           </p>
         </article>
 
@@ -192,58 +190,8 @@ export function HomeView() {
         </div>
       </section>
 
-      {/* ─── TODAY'S MISSION ───────────────────────────────────────────── */}
-      <section className="rounded-[28px] bg-card p-5 shadow-soft">
-        <header className="mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-butter" />
-            <h3 className="text-sm font-bold uppercase tracking-wider text-foreground/80">Today's Mission</h3>
-          </div>
-          <span className="rounded-full bg-sage-soft px-3 py-1 text-xs font-bold text-sage">
-            {Math.round(missionsPct)}%
-          </span>
-        </header>
-
-        <ul className="space-y-2">
-          {STARTER_MISSIONS.map((m) => {
-            const done = completedMissions.includes(m.id);
-            return (
-              <li key={m.id}>
-                <button
-                  type="button"
-                  onClick={() => toggleMission(m.id)}
-                  className="flex w-full items-center gap-3 rounded-2xl bg-muted/60 px-3 py-2.5 text-left transition hover:bg-muted"
-                >
-                  <span
-                    className={`grid h-6 w-6 place-items-center rounded-full border-2 transition ${
-                      done ? "border-sage bg-sage text-white" : "border-border bg-card"
-                    }`}
-                  >
-                    {done && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
-                  </span>
-                  <span className={`text-sm font-medium ${done ? "text-muted-foreground line-through" : "text-foreground"}`}>
-                    {m.label}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-
-        {/* Linear progress bar tinted to live mood color */}
-        <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-muted">
-          <div
-            className="h-full rounded-full transition-[width] duration-700 ease-out"
-            style={{
-              width: `${missionsPct}%`,
-              background: `linear-gradient(90deg, ${currentMood.color}, var(--butter))`,
-            }}
-          />
-        </div>
-        <p className="mt-2 text-xs text-muted-foreground">
-          {missionsDone}/{missionsTotal} missions completed today
-        </p>
-      </section>
+      {/* ─── RECOVERY MISSIONS CHECKLIST ─────────────────────────────── */}
+      <RecoveryMissionsChecklist />
     </div>
   );
 }

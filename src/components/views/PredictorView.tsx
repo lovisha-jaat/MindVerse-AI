@@ -17,7 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Activity, Brain, Moon, MonitorSmartphone, Coffee, HeartPulse, Sparkles } from "lucide-react";
+import { Activity, Brain, Moon, MonitorSmartphone, Coffee, HeartPulse, Sparkles, Download } from "lucide-react";
 import { useMindVerse } from "@/context/MindVerseContext";
 import { predictStress, type CaffeineLevel } from "@/lib/stressModel";
 import { MoodJournalCalendar } from "@/components/MoodJournalCalendar";
@@ -46,9 +46,32 @@ function SliderRow({
 }
 
 export function PredictorView() {
-  const { mlInputs, setMlInputs, currentMood, setCurrentMood, logMoodToJournal } = useMindVerse();
+  const { mlInputs, setMlInputs, currentMood, setCurrentMood, logMoodToJournal, moodJournal } = useMindVerse();
   const [loading, setLoading] = useState(false);
   const [lastResult, setLastResult] = useState<ReturnType<typeof predictStress> | null>(null);
+
+  const exportCSV = () => {
+    if (moodJournal.length === 0) return;
+    
+    // Create CSV content
+    const headers = ["Date", "Label", "Emoji", "Stress Level (%)"];
+    const rows = moodJournal.map(entry => 
+      [entry.date, entry.label, entry.emoji, entry.stressLevel].map(field => 
+        `"${String(field).replace(/"/g, '""')}"`
+      ).join(",")
+    );
+    const csvContent = [headers.join(","), ...rows].join("\n");
+    
+    // Create and download the file
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `mindverse-mood-journal-${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   function runAnalysis() {
     setLoading(true);
@@ -178,6 +201,17 @@ export function PredictorView() {
         </section>
       </div>
 
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={exportCSV}
+          disabled={moodJournal.length === 0}
+          className="flex items-center gap-2 rounded-full bg-card px-4 py-2 text-sm font-bold text-foreground shadow-soft transition hover:bg-muted/50 disabled:opacity-50"
+        >
+          <Download className="h-4 w-4" />
+          Export Journal CSV
+        </button>
+      </div>
       <MoodJournalCalendar />
       <ExecutiveSummary />
     </div>
