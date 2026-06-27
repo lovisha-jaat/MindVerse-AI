@@ -45,29 +45,6 @@ Designed with architecture stability and graceful failure parameters, it guarant
 
 ---
 
-## 💻 Local Installation & Build Lifecycle
-
-Follow these terminal steps to compile the TypeScript asset bundle locally:
-
-```bash
-# 1. Clone the codebase repository
-git clone https://github.com
-
-# 2. Enter the root project volume
-cd MindVerse-AI
-
-# 3. Provision environment variables
-echo "VITE_OPENAI_API_KEY=your_key_here" > .env
-
-# 4. Install modular packages
-npm install
-
-# 5. Run the high-speed Vite dev server
-npm run dev
-```
-
----
-
 ## 👩‍💻 Author & Main Engineering Architect
 *   **Lead Developer:** Lovisha Jaat
 *   **Portfolio Nexus:** [lovisha-jaat.github.io/My-Portfolio/](https://lovisha-jaat.github.io/My-Portfolio/)
