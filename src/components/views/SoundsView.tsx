@@ -218,7 +218,7 @@ function AmbientSoundGrid({ moodColor }: { moodColor: string }) {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
         {AMBIENT_SOUNDS.map((sound) => {
           const active = currentlyPlayingSoundId === sound.id && !isMuted;
           return (
@@ -414,7 +414,7 @@ function FrequencyPlayer({ initialSound, onReset }: {
         <h3 className="font-display text-lg font-bold text-foreground">
           All Frequencies
         </h3>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
           {FREQUENCY_SOUNDS.map((sound) => {
             const isActive = currentlyPlayingSoundId === sound.id && !isMuted;
             return (
