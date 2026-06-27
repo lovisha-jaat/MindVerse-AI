@@ -169,6 +169,7 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const currentlyPlayingIdRef = useRef<string | null>(null);
   const reminderIntervalRef = useRef<number | null>(null);
+  const isLoggingOutRef = useRef(false); // Flag to prevent persistence during logout
   const [currentMood, setCurrentMood] = useState<MoodResult>({
     label: "Calm",
     color: "#A8D5BA",
@@ -222,7 +223,7 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
 
   // --- persist on change (client only) -------------------------------------
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || isLoggingOutRef.current) return;
     const payload = {
       userName,
       companionName,
@@ -241,7 +242,7 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
     } catch {
       /* quota exceeded — silently ignore */
     }
-  }, [userName, mlInputs, currentMood, completedMissions, moodJournal, isMuted, pushReminders, darkMode]);
+  }, [userName, companionName, mlInputs, currentMood, completedMissions, moodJournal, gratitudeJournal, customQuotes, isMuted, pushReminders, darkMode]);
 
   // Apply / remove the `dark` class on <html> when the user toggles dark mode.
   useEffect(() => {
@@ -251,6 +252,7 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
 
   // Logout function to reset all state
   const logout = useCallback(() => {
+    isLoggingOutRef.current = true; // Disable persistence
     if (typeof window !== "undefined") {
       window.localStorage.removeItem(LS_KEY);
     }
@@ -285,6 +287,11 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
     }
     currentlyPlayingIdRef.current = null;
     setCurrentlyPlayingSoundId(null);
+    
+    // Re-enable persistence after a short delay
+    setTimeout(() => {
+      isLoggingOutRef.current = false;
+    }, 500);
   }, []);
 
   // Update audio's muted state when isMuted changes
