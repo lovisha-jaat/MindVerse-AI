@@ -42,8 +42,8 @@ export function WorkspaceShell() {
         />
       </div>
 
-      {/* Content well — max-w-2xl reads nicely on tablet, mobile-native on phones */}
-      <main className="relative z-10 mx-auto w-full max-w-2xl px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-20">
+      {/* Content well — responsive for mobile, tablet, and desktop */}
+      <main className="relative z-10 mx-auto w-full max-w-2xl px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-20 md:max-w-3xl lg:max-w-5xl">
         {ActiveView}
       </main>
 
