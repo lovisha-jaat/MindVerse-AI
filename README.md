@@ -54,5 +54,5 @@ Designed with architecture stability and graceful failure parameters, it guarant
 ## 👩‍💻 Author & Main Engineering Architect
 
 - **Lead Developer:** Lovisha Jaat
-- **Live Application Nexus:** [mindverse-ai-five.vercel.app](https://mindverse-ai-five.vercel.app/) and [mind-verse-ai.vercel.app](https://mind-verse-ai.vercel.app/)
+- **Live Application Nexus:** [mindverse-ai-five.vercel.app](https://mindverse-ai-five.vercel.app/) and [mind-verse-ai.vercel.app](https://mind-verse-ai.vercel.app/) (both updated!)
 
