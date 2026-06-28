@@ -141,6 +141,7 @@ export function ProfileView() {
           variant="destructive"
           className="w-full justify-center bg-peach hover:bg-peach/90"
           onClick={logout}
+          type="button"
         >
           Log Out
         </Button>

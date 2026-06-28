@@ -490,11 +490,12 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
     }),
     [
       userName, setUserName,
+      logout,
       companionName, setCompanionName,
       playSound,
       stopSound,
       currentlyPlayingSoundId,
-      activeTab,
+      activeTab, setActiveTab,
       currentMood,
       effectiveMood,
       mlInputs, setMlInputs,
