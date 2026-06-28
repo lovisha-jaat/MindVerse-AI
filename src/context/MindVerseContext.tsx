@@ -63,7 +63,7 @@ interface GratitudeEntry {
 interface MindVerseState {
   // identity / onboarding
   userName: string | null;
-  setUserName: (n: string) => void;
+  setUserName: (n: string | null) => void;
   logout: () => void;
 
   // companion
@@ -252,13 +252,46 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
 
   // Logout function to reset all state
   const logout = useCallback(() => {
-    console.log("LOGOUT CALLED!");
+    isLoggingOutRef.current = true; // Disable persistence
     if (typeof window !== "undefined") {
-      window.localStorage.clear();
-      console.log("LocalStorage cleared");
+      window.localStorage.removeItem(LS_KEY);
     }
-    // Force re-hydration by reloading the page - this is a sure way
-    window.location.reload();
+    setUserName(null);
+    setCompanionName("Coco");
+    setCurrentMood({
+      label: "Calm",
+      color: "#A8D5BA",
+      emoji: "😌",
+      stressLevel: 34,
+    });
+    setMlInputs({
+      sleepHours: 7,
+      studyHours: 4,
+      screenTime: 5,
+      caffeine: "Medium",
+      heartRate: 72,
+      hrvLinked: false,
+    });
+    setIsMuted(false);
+    setCompletedMissions([]);
+    setMoodJournal(seedJournal());
+    setGratitudeJournal([]);
+    setCustomQuotes([]);
+    setPushReminders(true);
+    setDarkMode(false);
+    setActiveTab("home");
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
+    }
+    currentlyPlayingIdRef.current = null;
+    setCurrentlyPlayingSoundId(null);
+    
+    // Re-enable persistence after a short delay
+    setTimeout(() => {
+      isLoggingOutRef.current = false;
+    }, 500);
   }, []);
 
   // Update audio's muted state when isMuted changes
@@ -296,7 +329,7 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
   }, [pushReminders, sendNotification]);
 
   // --- stable action creators ---------------------------------------------
-  const setUserName = useCallback((n: string) => setUserNameState(n.trim() || null), []);
+  const setUserName = useCallback((n: string | null) => setUserNameState(n ? n.trim() || null : null), []);
   const setCompanionName = useCallback((n: string) => setCompanionNameState(n.trim() || "Coco"), []);
   const setMlInputs = useCallback(
     (patch: Partial<MlInputs>) => setMlInputsState((prev) => ({ ...prev, ...patch })),
