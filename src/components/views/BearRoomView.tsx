@@ -21,7 +21,19 @@
  */
 
 import { useEffect, useMemo, useRef, useState, type FormEvent, type PointerEvent } from "react";
-import { BookOpen, Sparkles, Wind, Music2, X, Send, MessageCircle, Mic, Heart, Plus, Trash2 } from "lucide-react";
+import {
+  BookOpen,
+  Sparkles,
+  Wind,
+  Music2,
+  X,
+  Send,
+  MessageCircle,
+  Mic,
+  Heart,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import foxImg from "@/assets/fox.png";
 import { useMindVerse } from "@/context/MindVerseContext";
 import OpenAI from "openai";
@@ -34,10 +46,10 @@ type Feeling = "good" | "tense" | "stressed" | "horrible";
 type ToolId = "book" | "bubbles" | "breathe" | "sand" | "music" | "gratitude";
 
 const FEELINGS: { id: Feeling; label: string; emoji: string; tone: string }[] = [
-  { id: "good",     label: "Good",     emoji: "🙂", tone: "var(--butter-soft)"   },
-  { id: "tense",    label: "Tense",    emoji: "😅", tone: "var(--peach-soft)"    },
+  { id: "good", label: "Good", emoji: "🙂", tone: "var(--butter-soft)" },
+  { id: "tense", label: "Tense", emoji: "😅", tone: "var(--peach-soft)" },
   { id: "stressed", label: "Stressed", emoji: "😔", tone: "var(--lavender-soft)" },
-  { id: "horrible", label: "Horrible", emoji: "😞", tone: "var(--sky-soft)"      },
+  { id: "horrible", label: "Horrible", emoji: "😞", tone: "var(--sky-soft)" },
 ];
 
 /** Pip's recommendation for each feeling — names the exact tool to try. */
@@ -90,79 +102,115 @@ interface ActionType {
   data?: any;
 }
 
-const THERAPY_BANK: { match: RegExp; reply: (name: string, companionName: string) => string; action?: ActionType }[] = [
+const THERAPY_BANK: {
+  match: RegExp;
+  reply: (name: string, companionName: string) => string;
+  action?: ActionType;
+}[] = [
   // Super simple test cases
-  { match: /^test bubbles$/i, reply: (n, c) => `Okay ${n}, opening bubbles! 🎉`, action: { type: "openTool", data: "bubbles" } },
-  { match: /^test sounds$/i, reply: (n, c) => `Okay ${n}, taking you to sounds! 🎵`, action: { type: "navigate", data: "sounds" } },
-  { match: /^test book$/i, reply: (n, c) => `Okay ${n}, opening the book! 📖`, action: { type: "openTool", data: "book" } },
+  {
+    match: /^test bubbles$/i,
+    reply: (n, c) => `Okay ${n}, opening bubbles! 🎉`,
+    action: { type: "openTool", data: "bubbles" },
+  },
+  {
+    match: /^test sounds$/i,
+    reply: (n, c) => `Okay ${n}, taking you to sounds! 🎵`,
+    action: { type: "navigate", data: "sounds" },
+  },
+  {
+    match: /^test book$/i,
+    reply: (n, c) => `Okay ${n}, opening the book! 📖`,
+    action: { type: "openTool", data: "book" },
+  },
   // Sad/down/unhappy/upset -> Book of Calm (MOST SPECIFIC FIRST!)
-  { 
-    match: /(i('m| am)? (sad|down|unhappy|upset|not feeling well|feeling down|depressed|crying|lonely|heartbroken|empty|miserable|gloomy|dejected|broken|heartbroken|gutted|down in the dumps|low|glum))|(feeling sad)|(i feel sad)|(i don't feel good)|(i dont feel good)|(i don't feel well)|(i dont feel well)|(i don't feel fine)|(i dont feel fine)|(i don't feel okay)|(i dont feel okay)|(doesn't feel good)|(doesnt feel good)|(doesn't feel well)|(doesnt feel well)|(not okay)|(i('m| am)? not (good|well|fine|okay|great|alright))|(feels? not good)|(feels? bad)|(i('m| am)? feeling bad)|(i('m| am)? not feeling it)|(i('m| am)? having a bad day)|(i('m| am)? not in a good mood)|(i('m| am)? in a bad mood)|(i('m| am)? feeling low)|(i('m| am)? feeling empty)|(i('m| am)? feeling miserable)|(i('m| am)? feeling lonely)|(i('m| am)? feeling heartbroken)|(having a bad time)|(really sad)|(so sad)|(very sad)|(feeling really down)/i, 
-    reply: (n, c) => `Oh ${n}, my heart goes out to you 💛. I'm so glad you're sharing this with me — let's look at the Book of Calm together for some gentle words, and the 528 Hz frequency in Sounds tab might help lift your spirits a little. I'm not going anywhere, okay?`,
-    action: { type: "openTool", data: "book" }
+  {
+    match:
+      /(i('m| am)? (sad|down|unhappy|upset|not feeling well|feeling down|depressed|crying|lonely|heartbroken|empty|miserable|gloomy|dejected|broken|heartbroken|gutted|down in the dumps|low|glum))|(feeling sad)|(i feel sad)|(i don't feel good)|(i dont feel good)|(i don't feel well)|(i dont feel well)|(i don't feel fine)|(i dont feel fine)|(i don't feel okay)|(i dont feel okay)|(doesn't feel good)|(doesnt feel good)|(doesn't feel well)|(doesnt feel well)|(not okay)|(i('m| am)? not (good|well|fine|okay|great|alright))|(feels? not good)|(feels? bad)|(i('m| am)? feeling bad)|(i('m| am)? not feeling it)|(i('m| am)? having a bad day)|(i('m| am)? not in a good mood)|(i('m| am)? in a bad mood)|(i('m| am)? feeling low)|(i('m| am)? feeling empty)|(i('m| am)? feeling miserable)|(i('m| am)? feeling lonely)|(i('m| am)? feeling heartbroken)|(having a bad time)|(really sad)|(so sad)|(very sad)|(feeling really down)/i,
+    reply: (n, c) =>
+      `Oh ${n}, my heart goes out to you 💛. I'm so glad you're sharing this with me — let's look at the Book of Calm together for some gentle words, and the 528 Hz frequency in Sounds tab might help lift your spirits a little. I'm not going anywhere, okay?`,
+    action: { type: "openTool", data: "book" },
   },
   // Anxious/worried/stressed/overwhelmed/nervous -> Bubble Pop
-  { 
-    match: /(i('m| am)? (anxious|worried|stressed|overwhelmed|nervous|panicking))|(feeling anxious)|(i feel anxious)|(stressed out)|(having anxiety)/i, 
-    reply: (n, c) => `Hey ${n}, it's okay to feel this way — I'm right here with you 🧘. Let's pop some bubbles together to release that tension, and then the Theta Waves sounds in Sounds tab can help calm your mind. You're not alone in this!`,
-    action: { type: "openTool", data: "bubbles" }
+  {
+    match:
+      /(i('m| am)? (anxious|worried|stressed|overwhelmed|nervous|panicking))|(feeling anxious)|(i feel anxious)|(stressed out)|(having anxiety)/i,
+    reply: (n, c) =>
+      `Hey ${n}, it's okay to feel this way — I'm right here with you 🧘. Let's pop some bubbles together to release that tension, and then the Theta Waves sounds in Sounds tab can help calm your mind. You're not alone in this!`,
+    action: { type: "openTool", data: "bubbles" },
   },
   // Tired/sleepy/exhausted -> Breathing Orb
-  { 
-    match: /(i('m| am)? (tired|sleepy|exhausted|worn out|wiped out|need sleep|can't sleep))|(feeling tired)|(i feel tired)/i, 
-    reply: (n, c) => `Oh ${n}, I can feel how tired you are 💜. Let's take a break together — I'm opening the Breathing Orb to help you slow down, and I really recommend the Delta Waves sounds in the Sounds tab for deep relaxation. You deserve this rest!`,
-    action: { type: "openTool", data: "breathe" }
+  {
+    match:
+      /(i('m| am)? (tired|sleepy|exhausted|worn out|wiped out|need sleep|can't sleep))|(feeling tired)|(i feel tired)/i,
+    reply: (n, c) =>
+      `Oh ${n}, I can feel how tired you are 💜. Let's take a break together — I'm opening the Breathing Orb to help you slow down, and I really recommend the Delta Waves sounds in the Sounds tab for deep relaxation. You deserve this rest!`,
+    action: { type: "openTool", data: "breathe" },
   },
   // Angry/mad/frustrated/irritated -> Zen Sand
-  { 
-    match: /(i('m| am)? (angry|mad|frustrated|irritated|annoyed|furious))|(feeling angry)|(i feel angry)|(so mad)|(really frustrated)/i, 
-    reply: (n, c) => `I get it, ${n} — that frustration is valid 🔥. Let's channel that energy into the Zen Sand tray — draw whatever you need to, and the 417 Hz sounds in Sounds tab can help you release that tension in a gentle way.`,
-    action: { type: "openTool", data: "sand" }
+  {
+    match:
+      /(i('m| am)? (angry|mad|frustrated|irritated|annoyed|furious))|(feeling angry)|(i feel angry)|(so mad)|(really frustrated)/i,
+    reply: (n, c) =>
+      `I get it, ${n} — that frustration is valid 🔥. Let's channel that energy into the Zen Sand tray — draw whatever you need to, and the 417 Hz sounds in Sounds tab can help you release that tension in a gentle way.`,
+    action: { type: "openTool", data: "sand" },
   },
   // Focus/study/work/concentrate -> Breathing Orb
-  { 
-    match: /(i ('m| am)? trying to (focus|study|work|concentrate))|(need to focus)|(can't focus)|(having trouble concentrating)/i, 
-    reply: (n, c) => `Cognitive load can feel so heavy, ${n} — I see how hard you're trying 💪. Let's do a quick breathing exercise first to reset, and then the Alpha Waves sounds in the Sounds tab can help you get into a focused flow state!`,
-    action: { type: "openTool", data: "breathe" }
+  {
+    match:
+      /(i ('m| am)? trying to (focus|study|work|concentrate))|(need to focus)|(can't focus)|(having trouble concentrating)/i,
+    reply: (n, c) =>
+      `Cognitive load can feel so heavy, ${n} — I see how hard you're trying 💪. Let's do a quick breathing exercise first to reset, and then the Alpha Waves sounds in the Sounds tab can help you get into a focused flow state!`,
+    action: { type: "openTool", data: "breathe" },
   },
   // Ask about sounds/music/frequencies -> Navigate to Sounds tab
-  { 
-    match: /(sounds?|music|ambient|frequency|frequencies|listen to something|play music)/i, 
-    reply: (n, c) => `Absolutely, ${n}! 🎵 I'm taking you straight to the Sounds tab — we have beautiful ambient mixes and healing frequencies for every mood. Let's go explore together!`,
-    action: { type: "navigate", data: "sounds" }
+  {
+    match: /(sounds?|music|ambient|frequency|frequencies|listen to something|play music)/i,
+    reply: (n, c) =>
+      `Absolutely, ${n}! 🎵 I'm taking you straight to the Sounds tab — we have beautiful ambient mixes and healing frequencies for every mood. Let's go explore together!`,
+    action: { type: "navigate", data: "sounds" },
   },
   // Ask about games/play -> Bubble Pop
-  { 
-    match: /(game|games|play|fun|want to play|play something)/i, 
-    reply: (n, c) => `Yes! Let's play! 🎮 I'm opening the Bubble Pop game for you — let's see how many you can pop together!`,
-    action: { type: "openTool", data: "bubbles" }
+  {
+    match: /(game|games|play|fun|want to play|play something)/i,
+    reply: (n, c) =>
+      `Yes! Let's play! 🎮 I'm opening the Bubble Pop game for you — let's see how many you can pop together!`,
+    action: { type: "openTool", data: "bubbles" },
   },
   // Ask to change name
-  { 
-    match: /(change your name|rename|call you|what's your name|your name)/i, 
-    reply: (n, c) => `Of course, ${n}! 💖 You can change my name anytime in the Profile tab — whatever feels right to you! I'm so glad you want to make our space even more personal.`
+  {
+    match: /(change your name|rename|call you|what's your name|your name)/i,
+    reply: (n, c) =>
+      `Of course, ${n}! 💖 You can change my name anytime in the Profile tab — whatever feels right to you! I'm so glad you want to make our space even more personal.`,
   },
   // Greetings
   {
     match: /(hi|hello|hey|good morning|good afternoon|good evening|what's up|sup)/i,
-    reply: (n, c) => `Hey ${n}! So glad you're here 🤗. How are you feeling today? I'm ready to help with whatever you need — whether it's a breathing exercise, some bubble popping, or just a listening ear.`
+    reply: (n, c) =>
+      `Hey ${n}! So glad you're here 🤗. How are you feeling today? I'm ready to help with whatever you need — whether it's a breathing exercise, some bubble popping, or just a listening ear.`,
   },
   // Ask how are you
   {
     match: /(how are you|how r u|how you doing)/i,
-    reply: (n, c) => `I'm doing wonderful, ${n} — especially now that you're here! 🥰 But enough about me — how are YOU doing? Tell me what's on your mind or how you're feeling right now.`
+    reply: (n, c) =>
+      `I'm doing wonderful, ${n} — especially now that you're here! 🥰 But enough about me — how are YOU doing? Tell me what's on your mind or how you're feeling right now.`,
   },
   // Thank you/positive feedback (NOW MORE SPECIFIC, AT END!)
-  { 
-    match: /(thank|thanks|thank you|that's better|i feel better|that helped)/i, 
-    reply: (n, c) => `You're so welcome, ${n}! 🦊 It makes my heart happy to see you feeling a little better. Noticing what's working teaches your nervous system where safety lives. I'll always be right here whenever you need me!`
-  }
+  {
+    match: /(thank|thanks|thank you|that's better|i feel better|that helped)/i,
+    reply: (n, c) =>
+      `You're so welcome, ${n}! 🦊 It makes my heart happy to see you feeling a little better. Noticing what's working teaches your nervous system where safety lives. I'll always be right here whenever you need me!`,
+  },
 ];
 
 const FALLBACK = (n: string, c: string) =>
   `I'm so glad you're talking to me, ${n} 💖! I'm here for whatever you need — whether you want to try one of our cozy tools, listen to some calming sounds, or just chat about how you're feeling. Take your time — what would feel most helpful right now?`;
 
-interface ChatMessage { id: string; from: "user" | "fox"; text: string }
+interface ChatMessage {
+  id: string;
+  from: "user" | "fox";
+  text: string;
+}
 
 /* ─────────────────────────────────────────────────────────────────────────── */
 /* Main component                                                              */
@@ -181,7 +229,8 @@ export function BearRoomView() {
 
   // Coco's default greeting line if no feeling has been picked yet.
   const greeting = useMemo(
-    () => `Hey ${name}, I'm ${companionName} 🦊 — tap how you feel and I'll suggest something cozy, or just chat with me!`,
+    () =>
+      `Hey ${name}, I'm ${companionName} 🦊 — tap how you feel and I'll suggest something cozy, or just chat with me!`,
     [name, companionName],
   );
 
@@ -192,7 +241,9 @@ export function BearRoomView() {
       {/* ── HEADER ───────────────────────────────────────────────────────── */}
       <header className="space-y-1">
         <p className="text-xs font-bold uppercase tracking-wider text-sage">Sanctuary</p>
-        <h1 className="font-display text-2xl font-extrabold text-foreground">{companionName}'s Cozy Room</h1>
+        <h1 className="font-display text-2xl font-extrabold text-foreground">
+          {companionName}'s Cozy Room
+        </h1>
         <p className="text-sm text-muted-foreground">
           A safe place. Come here for a quick reset any time of day.
         </p>
@@ -206,10 +257,10 @@ export function BearRoomView() {
 
           {/* Warm wallpapered walls */}
           <div className="room-walls" aria-hidden />
-          
+
           {/* Framed picture on wall */}
           <div className="room-picture" aria-hidden />
-          
+
           {/* Cozy curtains */}
           <div className="room-curtain room-curtain-left" aria-hidden />
           <div className="room-curtain room-curtain-right" aria-hidden />
@@ -241,14 +292,14 @@ export function BearRoomView() {
           <div className="room-side-table" aria-hidden>
             <span></span>
           </div>
-          
+
           {/* Table lamp on side table */}
           <div className="room-lamp" aria-hidden />
-          
+
           {/* Cozy floor pillows near Pip */}
           <div className="room-pillow room-pillow-1" aria-hidden />
           <div className="room-pillow room-pillow-2" aria-hidden />
-          
+
           {/* Small stack of books */}
           <div className="room-book-stack" aria-hidden />
 
@@ -266,7 +317,9 @@ export function BearRoomView() {
               <span className="room-spine room-spine-4" />
               <span className="room-spine room-spine-5" />
             </span>
-            <span className="room-label"><BookOpen className="h-3 w-3" /> Book</span>
+            <span className="room-label">
+              <BookOpen className="h-3 w-3" /> Book
+            </span>
           </button>
 
           {/* ── Bubble jar (mini-game) ──────────────────────────────── */}
@@ -280,7 +333,9 @@ export function BearRoomView() {
             <span className="room-jar-bubble room-jar-bubble-1" />
             <span className="room-jar-bubble room-jar-bubble-2" />
             <span className="room-jar-bubble room-jar-bubble-3" />
-            <span className="room-label"><Sparkles className="h-3 w-3" /> Bubbles</span>
+            <span className="room-label">
+              <Sparkles className="h-3 w-3" /> Bubbles
+            </span>
           </button>
 
           {/* ── Breathing orb on a small table ──────────────────────── */}
@@ -291,7 +346,9 @@ export function BearRoomView() {
             className={`room-item room-item-orb ${suggestion?.tool === "breathe" ? "is-suggested" : ""}`}
           >
             <span className="room-orb" />
-            <span className="room-label"><Wind className="h-3 w-3" /> Breathe</span>
+            <span className="room-label">
+              <Wind className="h-3 w-3" /> Breathe
+            </span>
           </button>
 
           {/* ── Zen sand tray on the floor ──────────────────────────── */}
@@ -314,7 +371,9 @@ export function BearRoomView() {
           >
             <span className="room-musicbox" />
             <span className="room-musicnote">♪</span>
-            <span className="room-label"><Music2 className="h-3 w-3" /> Music</span>
+            <span className="room-label">
+              <Music2 className="h-3 w-3" /> Music
+            </span>
           </button>
 
           <button
@@ -363,7 +422,9 @@ export function BearRoomView() {
                   }`}
                   style={{ background: f.tone }}
                 >
-                  <div className="text-2xl" aria-hidden>{f.emoji}</div>
+                  <div className="text-2xl" aria-hidden>
+                    {f.emoji}
+                  </div>
                   <p className="mt-1 text-[11px] font-bold text-foreground">{f.label}</p>
                 </button>
               );
@@ -376,12 +437,14 @@ export function BearRoomView() {
       <ChatConsole name={name} setOpenTool={setOpenTool} />
 
       {/* ── Tool modals ──────────────────────────────────────────────────── */}
-      {openTool === "book"    && <BookModal    name={name} onClose={() => setOpenTool(null)} />}
-      {openTool === "bubbles" && <BubblesModal              onClose={() => setOpenTool(null)} />}
-      {openTool === "breathe" && <BreatheModal              onClose={() => setOpenTool(null)} />}
-      {openTool === "sand"    && <SandModal                 onClose={() => setOpenTool(null)} />}
-      {openTool === "music"   && <MusicModal   mood={currentMood.label} onClose={() => setOpenTool(null)} />}
-      {openTool === "gratitude" && <GratitudeModal         onClose={() => setOpenTool(null)} />}
+      {openTool === "book" && <BookModal name={name} onClose={() => setOpenTool(null)} />}
+      {openTool === "bubbles" && <BubblesModal onClose={() => setOpenTool(null)} />}
+      {openTool === "breathe" && <BreatheModal onClose={() => setOpenTool(null)} />}
+      {openTool === "sand" && <SandModal onClose={() => setOpenTool(null)} />}
+      {openTool === "music" && (
+        <MusicModal mood={currentMood.label} onClose={() => setOpenTool(null)} />
+      )}
+      {openTool === "gratitude" && <GratitudeModal onClose={() => setOpenTool(null)} />}
     </div>
   );
 }
@@ -391,16 +454,26 @@ export function BearRoomView() {
 /* ─────────────────────────────────────────────────────────────────────────── */
 
 function Modal({
-  title, onClose, children, tone = "bg-card",
-}: { title: string; onClose: () => void; children: React.ReactNode; tone?: string }) {
+  title,
+  onClose,
+  children,
+  tone = "bg-card",
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+  tone?: string;
+}) {
   // Close on Escape — modest a11y nicety.
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
     window.addEventListener("keydown", onKey);
-    
+
     // Prevent background scrolling when modal is open
     document.body.style.overflow = "hidden";
-    
+
     return () => {
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
@@ -408,19 +481,31 @@ function Modal({
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 pb-24 overflow-y-auto" onClick={onClose} style={{ touchAction: 'auto' }}>
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 pb-24 overflow-y-auto"
+      onClick={onClose}
+      style={{ touchAction: "auto" }}
+    >
       <div
         className={`w-full max-w-md rounded-[28px] ${tone} p-5 shadow-soft-lg animate-fade-in`}
         onClick={(e) => e.stopPropagation()}
-        style={{ touchAction: 'auto' }}
+        style={{ touchAction: "auto" }}
       >
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-display text-lg font-extrabold text-foreground">{title}</h2>
-          <button type="button" onClick={onClose} className="grid h-8 w-8 place-items-center rounded-full bg-card shadow-soft" aria-label="Close">
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-8 w-8 place-items-center rounded-full bg-card shadow-soft"
+            aria-label="Close"
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="overflow-y-auto" style={{ touchAction: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <div
+          className="overflow-y-auto"
+          style={{ touchAction: "auto", WebkitOverflowScrolling: "touch" }}
+        >
           {children}
         </div>
       </div>
@@ -439,7 +524,7 @@ function BookModal({ name, onClose }: { name: string; onClose: () => void }) {
   const line = allQuotes[idx];
   const [showAddQuote, setShowAddQuote] = useState(false);
   const [newQuote, setNewQuote] = useState("");
-  
+
   const next = () => {
     window.speechSynthesis.cancel();
     setIsSpeaking(false);
@@ -456,7 +541,7 @@ function BookModal({ name, onClose }: { name: string; onClose: () => void }) {
 
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voicesLoaded, setVoicesLoaded] = useState(false);
-  
+
   useEffect(() => {
     const loadVoices = () => {
       if (window.speechSynthesis.getVoices().length > 0) {
@@ -476,40 +561,41 @@ function BookModal({ name, onClose }: { name: string; onClose: () => void }) {
       speak();
     }
   }, [voicesLoaded, idx]);
-  
+
   const speak = () => {
     if (typeof window.speechSynthesis === "undefined") {
       alert("Text-to-speech is not supported in this browser!");
       return;
     }
-    
+
     if (isSpeaking) {
       window.speechSynthesis.cancel();
       setIsSpeaking(false);
       return;
     }
-    
+
     const utterance = new SpeechSynthesisUtterance(line);
     const voices = window.speechSynthesis.getVoices();
-    
+
     // Try to find a soft, female-sounding voice
-    const preferredVoices = voices.filter(voice => 
-      voice.name.toLowerCase().includes("female") || 
-      voice.name.toLowerCase().includes("zira") || 
-      voice.name.toLowerCase().includes("sara") ||
-      voice.name.toLowerCase().includes("serena") ||
-      voice.name.toLowerCase().includes("victoria") ||
-      voice.name.toLowerCase().includes("samantha") ||
-      voice.name.toLowerCase().includes("kate") ||
-      voice.name.toLowerCase().includes("uk english")
+    const preferredVoices = voices.filter(
+      (voice) =>
+        voice.name.toLowerCase().includes("female") ||
+        voice.name.toLowerCase().includes("zira") ||
+        voice.name.toLowerCase().includes("sara") ||
+        voice.name.toLowerCase().includes("serena") ||
+        voice.name.toLowerCase().includes("victoria") ||
+        voice.name.toLowerCase().includes("samantha") ||
+        voice.name.toLowerCase().includes("kate") ||
+        voice.name.toLowerCase().includes("uk english"),
     );
-    
+
     if (preferredVoices.length > 0) {
       utterance.voice = preferredVoices[0];
     } else if (voices.length > 0) {
       utterance.voice = voices[0];
     }
-    
+
     utterance.rate = 0.85; // Slightly slower for relaxation
     utterance.pitch = 1.05; // Slightly higher pitch for softness
     utterance.volume = 0.9; // Nice volume
@@ -518,11 +604,11 @@ function BookModal({ name, onClose }: { name: string; onClose: () => void }) {
       console.error("Speech error:", event);
       setIsSpeaking(false);
     };
-    
+
     setIsSpeaking(true);
     window.speechSynthesis.speak(utterance);
   };
-  
+
   return (
     <Modal title="Book of Calm 📖" onClose={onClose} tone="bg-butter-soft">
       <div className="rounded-[24px] bg-card p-5 shadow-soft">
@@ -602,6 +688,7 @@ function BookModal({ name, onClose }: { name: string; onClose: () => void }) {
 /* ─────────────────────────────────────────────────────────────────────────── */
 
 function BubblesModal({ onClose }: { onClose: () => void }) {
+  const { playPopSound } = useMindVerse();
   // Each bubble has a left% + delay so they stagger up the play area.
   const [bubbles, setBubbles] = useState(() =>
     Array.from({ length: 14 }, (_, i) => ({
@@ -616,13 +703,20 @@ function BubblesModal({ onClose }: { onClose: () => void }) {
 
   // Recycle bubbles after they're popped so the game keeps flowing.
   function pop(id: number) {
+    playPopSound();
     setPopped((n) => n + 1);
     setBubbles((prev) => prev.map((b) => (b.id === id ? { ...b, popped: true } : b)));
     window.setTimeout(() => {
       setBubbles((prev) =>
         prev.map((b) =>
           b.id === id
-            ? { ...b, popped: false, left: 6 + Math.random() * 88, delay: 0, size: 32 + Math.random() * 36 }
+            ? {
+                ...b,
+                popped: false,
+                left: 6 + Math.random() * 88,
+                delay: 0,
+                size: 32 + Math.random() * 36,
+              }
             : b,
         ),
       );
@@ -668,8 +762,8 @@ function BubblesModal({ onClose }: { onClose: () => void }) {
 function BreatheModal({ onClose }: { onClose: () => void }) {
   const phases = useMemo(
     () => [
-      { label: "Breathe in",  ms: 4000, scale: 1.4 },
-      { label: "Hold",        ms: 4000, scale: 1.4 },
+      { label: "Breathe in", ms: 4000, scale: 1.4 },
+      { label: "Hold", ms: 4000, scale: 1.4 },
       { label: "Breathe out", ms: 6000, scale: 1.0 },
     ],
     [],
@@ -687,7 +781,10 @@ function BreatheModal({ onClose }: { onClose: () => void }) {
         <div className="text-center">
           <div
             className="mx-auto h-32 w-32 rounded-full bg-gradient-to-br from-sage to-sky shadow-[0_0_60px_rgba(125,155,118,0.4)]"
-            style={{ transform: `scale(${p.scale})`, transition: `transform ${p.ms}ms ease-in-out` }}
+            style={{
+              transform: `scale(${p.scale})`,
+              transition: `transform ${p.ms}ms ease-in-out`,
+            }}
           />
           <p className="mt-6 font-display text-xl font-extrabold text-foreground">{p.label}</p>
         </div>
@@ -741,10 +838,17 @@ function SandModal({ onClose }: { onClose: () => void }) {
         ref={canvasRef}
         width={520}
         height={320}
-        onPointerDown={(e) => { drawing.current = true; paint(e); }}
+        onPointerDown={(e) => {
+          drawing.current = true;
+          paint(e);
+        }}
         onPointerMove={paint}
-        onPointerUp={() => { drawing.current = false; }}
-        onPointerLeave={() => { drawing.current = false; }}
+        onPointerUp={() => {
+          drawing.current = false;
+        }}
+        onPointerLeave={() => {
+          drawing.current = false;
+        }}
         className="h-72 w-full touch-none rounded-[24px] shadow-soft"
         style={{ background: "#f3e6cf" }}
       />
@@ -793,16 +897,27 @@ function MusicModal({ mood, onClose }: { mood: string; onClose: () => void }) {
     <Modal title="Music Box 🎵" onClose={onClose} tone="bg-lavender-soft">
       <div className="rounded-[24px] bg-card shadow-soft p-4">
         <div className="text-center">
-          <div className={`music-pulse mx-auto h-28 w-28 rounded-full bg-gradient-to-br from-lavender to-sky cursor-pointer ${isPlaying ? "animate-pulse" : ""}`} onClick={toggleSound} />
-          <p className="mt-6 font-display text-xl font-extrabold text-foreground">A tune for {mood}</p>
+          <div
+            className={`music-pulse mx-auto h-28 w-28 rounded-full bg-gradient-to-br from-lavender to-sky cursor-pointer ${isPlaying ? "animate-pulse" : ""}`}
+            onClick={toggleSound}
+          />
+          <p className="mt-6 font-display text-xl font-extrabold text-foreground">
+            A tune for {mood}
+          </p>
           <p className="mt-1 text-xs text-muted-foreground mb-4">
             {isPlaying ? "Click the orb to pause the music" : "Click the orb to play calming music"}
           </p>
           <div className="flex gap-3 justify-center">
-            <button onClick={toggleSound} className="rounded-full bg-gradient-to-r from-lavender to-sky px-6 py-3 text-sm font-bold text-white shadow-soft">
+            <button
+              onClick={toggleSound}
+              className="rounded-full bg-gradient-to-r from-lavender to-sky px-6 py-3 text-sm font-bold text-white shadow-soft"
+            >
               {isPlaying ? "Pause Sound" : "Play Sound"} ✨
             </button>
-            <button onClick={goToSounds} className="rounded-full bg-card px-6 py-3 text-sm font-bold text-foreground shadow-soft">
+            <button
+              onClick={goToSounds}
+              className="rounded-full bg-card px-6 py-3 text-sm font-bold text-foreground shadow-soft"
+            >
               Browse Sounds
             </button>
           </div>
@@ -889,16 +1004,20 @@ function GratitudeModal({ onClose }: { onClose: () => void }) {
 /* Enhanced chat console with voice chat and app actions                       */
 /* ─────────────────────────────────────────────────────────────────────────── */
 
-function ChatConsole({ 
-  name, 
-  setOpenTool 
-}: { 
-  name: string; 
-  setOpenTool: (tool: ToolId | null) => void; 
+function ChatConsole({
+  name,
+  setOpenTool,
+}: {
+  name: string;
+  setOpenTool: (tool: ToolId | null) => void;
 }) {
   const { companionName, setActiveTab } = useMindVerse();
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
-    { id: "intro", from: "fox", text: `Hey ${name}! I'm ${companionName} 🦊 — so glad you're here! Whether you want to try one of our cozy tools, listen to some calming sounds, or just chat about how you're feeling, I'm here for you! What's on your mind today?` },
+    {
+      id: "intro",
+      from: "fox",
+      text: `Hey ${name}! I'm ${companionName} 🦊 — so glad you're here! Whether you want to try one of our cozy tools, listen to some calming sounds, or just chat about how you're feeling, I'm here for you! What's on your mind today?`,
+    },
   ]);
   const [draft, setDraft] = useState("");
   const [typing, setTyping] = useState(false);
@@ -917,29 +1036,30 @@ function ChatConsole({
     setApiKeyError(false);
     return new OpenAI({
       apiKey: apiKey,
-      dangerouslyAllowBrowser: true // Required for browser-side calls (note: for production, use a backend!)
+      dangerouslyAllowBrowser: true, // Required for browser-side calls (note: for production, use a backend!)
     });
   }, []);
 
   // Speech recognition setup
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
       const recognition = new SpeechRecognition();
       recognition.continuous = false;
       recognition.interimResults = false;
       recognition.lang = "en-US";
-      
+
       recognition.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript;
         setDraft(transcript);
         setRecording(false);
       };
-      
+
       recognition.onerror = () => setRecording(false);
       recognition.onend = () => setRecording(false);
-      
+
       recognitionRef.current = recognition;
     }
   }, []);
@@ -965,7 +1085,7 @@ function ChatConsole({
     const text = draft.trim();
     if (!text) return;
     setDraft("");
-    
+
     // Add user message to chat
     const newUserMessage: ChatMessage = { id: crypto.randomUUID(), from: "user", text };
     setMessages((prev) => [...prev, newUserMessage]);
@@ -976,7 +1096,7 @@ function ChatConsole({
       if (matches) console.log("Matched pattern:", b.match);
       return matches;
     });
-    
+
     // Perform action immediately if found
     if (match?.action) {
       console.log("Performing action NOW:", match.action);
@@ -994,10 +1114,15 @@ function ChatConsole({
     try {
       // If API key is not set, fall back to predefined responses
       if (!openai) {
-        const fallbackReply = match ? match.reply(name, companionName) : FALLBACK(name, companionName);
+        const fallbackReply = match
+          ? match.reply(name, companionName)
+          : FALLBACK(name, companionName);
         const delay = 800 + Math.min(2200, fallbackReply.length * 18);
         window.setTimeout(() => {
-          setMessages((prev) => [...prev, { id: crypto.randomUUID(), from: "fox", text: fallbackReply }]);
+          setMessages((prev) => [
+            ...prev,
+            { id: crypto.randomUUID(), from: "fox", text: fallbackReply },
+          ]);
           setTyping(false);
         }, delay);
         return;
@@ -1020,13 +1145,13 @@ The app has several tools available:
 - Home Tab: Dashboard
 - Profile Tab: Settings
 
-You can also mention these tools when appropriate. Keep responses concise, warm, and use emojis sparingly. The user's name is ${name}.`
+You can also mention these tools when appropriate. Keep responses concise, warm, and use emojis sparingly. The user's name is ${name}.`,
         },
-        ...messages.map(msg => ({
+        ...messages.map((msg) => ({
           role: msg.from === "user" ? "user" : "assistant",
-          content: msg.text
+          content: msg.text,
         })),
-        { role: "user", content: text }
+        { role: "user", content: text },
       ];
 
       // Call OpenAI API
@@ -1034,7 +1159,7 @@ You can also mention these tools when appropriate. Keep responses concise, warm,
         model: "gpt-4o-mini", // or "gpt-3.5-turbo" for cheaper option
         messages: conversationHistory,
         temperature: 0.7, // Creativity level
-        max_tokens: 500
+        max_tokens: 500,
       });
 
       const aiReply = completion.choices[0].message.content || FALLBACK(name, companionName);
@@ -1043,8 +1168,13 @@ You can also mention these tools when appropriate. Keep responses concise, warm,
     } catch (error) {
       console.error("OpenAI API error:", error);
       // Fall back to predefined responses on error
-      const fallbackReply = match ? match.reply(name, companionName) : FALLBACK(name, companionName);
-      setMessages((prev) => [...prev, { id: crypto.randomUUID(), from: "fox", text: fallbackReply }]);
+      const fallbackReply = match
+        ? match.reply(name, companionName)
+        : FALLBACK(name, companionName);
+      setMessages((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), from: "fox", text: fallbackReply },
+      ]);
     } finally {
       setTyping(false);
     }
@@ -1067,7 +1197,8 @@ You can also mention these tools when appropriate. Keep responses concise, warm,
 
       {apiKeyError && (
         <div className="mx-4 mt-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800 border border-amber-200">
-          ⚠️ To use AI responses, set your OpenAI API key in the <code className="bg-amber-100 px-1 py-0.5 rounded font-mono text-xs">.env</code> file!
+          ⚠️ To use AI responses, set your OpenAI API key in the{" "}
+          <code className="bg-amber-100 px-1 py-0.5 rounded font-mono text-xs">.env</code> file!
         </div>
       )}
 
@@ -1086,7 +1217,9 @@ You can also mention these tools when appropriate. Keep responses concise, warm,
         {typing && (
           <div className="flex justify-start">
             <div className="rounded-2xl bg-sage-soft px-3 py-2 text-sm text-foreground/70 shadow-soft">
-              {companionName} is typing<span className="dot-1">.</span><span className="dot-2">.</span><span className="dot-3">.</span>
+              {companionName} is typing<span className="dot-1">.</span>
+              <span className="dot-2">.</span>
+              <span className="dot-3">.</span>
             </div>
           </div>
         )}
@@ -1100,7 +1233,10 @@ You can also mention these tools when appropriate. Keep responses concise, warm,
         )}
       </div>
 
-      <form onSubmit={handleSend} className="flex items-center gap-2 border-t border-border bg-card px-3 py-3">
+      <form
+        onSubmit={handleSend}
+        className="flex items-center gap-2 border-t border-border bg-card px-3 py-3"
+      >
         {recognitionRef.current && (
           <button
             type="button"

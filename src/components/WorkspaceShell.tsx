@@ -4,6 +4,7 @@
  * mute toggle, scrollable content well, sticky bottom nav, onboarding overlay.
  */
 import { OnboardingModal } from "./OnboardingModal";
+import { BiometricSurveyModal } from "./BiometricSurveyModal";
 import { MuteToggle } from "./MuteToggle";
 import { BottomNav } from "./BottomNav";
 import { useMindVerse } from "@/context/MindVerseContext";
@@ -12,16 +13,21 @@ import { HomeView } from "./views/HomeView";
 import { BearRoomView, SoundsView, ProfileView } from "./views/StubViews";
 
 export function WorkspaceShell() {
-  const { activeTab, effectiveMood } = useMindVerse();
+  const { activeTab, effectiveMood, userName, surveyCompleted } = useMindVerse();
 
   const ActiveView = (() => {
     switch (activeTab) {
-      case "predictor": return <PredictorView />;
-      case "bear-room": return <BearRoomView />;
-      case "sounds":    return <SoundsView />;
-      case "profile":   return <ProfileView />;
+      case "predictor":
+        return <PredictorView />;
+      case "bear-room":
+        return <BearRoomView />;
+      case "sounds":
+        return <SoundsView />;
+      case "profile":
+        return <ProfileView />;
       case "home":
-      default:          return <HomeView />;
+      default:
+        return <HomeView />;
     }
   })();
 
@@ -49,6 +55,7 @@ export function WorkspaceShell() {
 
       <BottomNav />
       <OnboardingModal />
+      <BiometricSurveyModal open={!!userName && !surveyCompleted} />
     </div>
   );
 }

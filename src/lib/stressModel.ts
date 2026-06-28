@@ -28,21 +28,25 @@
  */
 
 export type CaffeineLevel = "None" | "Low" | "Medium" | "High";
+export type FeelingLevel = "Great" | "Good" | "Okay" | "Low" | "Bad";
 
 export interface MlInputs {
-  sleepHours: number;   // 0-12
-  studyHours: number;   // 0-16
-  screenTime: number;   // 0-16
+  sleepHours: number; // 0-12
+  studyHours: number; // 0-16
+  screenTime: number; // 0-16
   caffeine: CaffeineLevel;
-  heartRate: number;    // resting bpm (used in summary)
-  hrvLinked?: boolean;  // wearable connected toggle
+  heartRate: number; // resting bpm (used in summary)
+  hrvLinked?: boolean; // wearable connected toggle
+  currentFeeling: FeelingLevel; // How are you feeling?
+  exerciseToday: boolean; // Did you exercise today?
+  ateWell: boolean; // Did you eat well today?
 }
 
 export type MoodTier = "Happy" | "Calm" | "Neutral" | "Stress" | "High Stress";
 
 export interface MoodResult {
   label: MoodTier;
-  color: string;   // exact hex from product palette
+  color: string; // exact hex from product palette
   emoji: string;
   stressLevel: number; // clamped 0-100
 }
@@ -65,11 +69,11 @@ const CAFFEINE_WEIGHT: Record<CaffeineLevel, number> = {
  * them without updating the design tokens in styles.css to match.
  */
 export function tierFromScore(score: number): MoodResult {
-  if (score < 20)  return { label: "Happy",       color: "#FFD66B", emoji: "😄", stressLevel: score };
-  if (score < 40)  return { label: "Calm",        color: "#A8D5BA", emoji: "😌", stressLevel: score };
-  if (score < 60)  return { label: "Neutral",     color: "#BFC9D1", emoji: "😐", stressLevel: score };
-  if (score < 80)  return { label: "Stress",      color: "#F5A26B", emoji: "😣", stressLevel: score };
-  return            { label: "High Stress",  color: "#E5604D", emoji: "😫", stressLevel: score };
+  if (score < 20) return { label: "Happy", color: "#FFD66B", emoji: "😄", stressLevel: score };
+  if (score < 40) return { label: "Calm", color: "#A8D5BA", emoji: "😌", stressLevel: score };
+  if (score < 60) return { label: "Neutral", color: "#BFC9D1", emoji: "😐", stressLevel: score };
+  if (score < 80) return { label: "Stress", color: "#F5A26B", emoji: "😣", stressLevel: score };
+  return { label: "High Stress", color: "#E5604D", emoji: "😫", stressLevel: score };
 }
 
 /**
@@ -91,7 +95,16 @@ export function tierFromScore(score: number): MoodResult {
  *   8. Clamp to [0, 100] and round for a clean integer for the UI ring.
  */
 export function predictStress(inputs: MlInputs): MoodResult {
-  const { sleepHours, studyHours, screenTime, caffeine, hrvLinked } = inputs;
+  const {
+    sleepHours,
+    studyHours,
+    screenTime,
+    caffeine,
+    hrvLinked,
+    currentFeeling,
+    exerciseToday,
+    ateWell,
+  } = inputs;
 
   let score = 25; // (1) baseline
 
@@ -115,7 +128,21 @@ export function predictStress(inputs: MlInputs): MoodResult {
   // (7) wearable trust bonus
   if (hrvLinked) score -= 4;
 
-  // (8) clamp + round
+  // (8) adjust for "how are you feeling?"
+  const FEELING_WEIGHT: Record<FeelingLevel, number> = {
+    Great: -15,
+    Good: -8,
+    Okay: 0,
+    Low: 8,
+    Bad: 15,
+  };
+  score += FEELING_WEIGHT[currentFeeling];
+
+  // (9) adjust for exercise and eating well
+  if (exerciseToday) score -= 7;
+  if (ateWell) score -= 5;
+
+  // (10) clamp + round
   score = Math.round(Math.min(100, Math.max(0, score)));
 
   return tierFromScore(score);

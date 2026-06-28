@@ -39,10 +39,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Check, Sparkles } from "lucide-react";
 import { useMindVerse } from "@/context/MindVerseContext";
-import {
-  RECOVERY_MISSIONS,
-  missionCompletionPercent,
-} from "@/lib/recoveryMissions";
+import { RECOVERY_MISSIONS, missionCompletionPercent } from "@/lib/recoveryMissions";
 
 /* ─────────────── Circular Progress Ring ───────────────────────────────── */
 
@@ -86,13 +83,16 @@ function MissionProgressRing({ percent, color }: { percent: number; color: strin
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
-          style={{ transition: "stroke-dashoffset 0.9s cubic-bezier(0.22,1,0.36,1), stroke 0.5s ease" }}
+          style={{
+            transition: "stroke-dashoffset 0.9s cubic-bezier(0.22,1,0.36,1), stroke 0.5s ease",
+          }}
         />
       </svg>
       <div className="pointer-events-none absolute inset-0 grid place-items-center">
         <div className="text-center">
           <p className="text-2xl font-extrabold tabular-nums text-foreground">
-            {percent}<span className="text-sm text-muted-foreground">%</span>
+            {percent}
+            <span className="text-sm text-muted-foreground">%</span>
           </p>
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             Complete

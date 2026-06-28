@@ -109,16 +109,16 @@
   --ring: oklch(0.72 0.09 150);
 
   /* Brand pastel palette — raw hex-equivalents for direct utility use */
-  --sage:         #87A878;   /* primary calm green */
-  --sage-soft:    #DCE8D4;
-  --peach:        #F4A896;   /* stress / warmth */
-  --peach-soft:   #FCE0D7;
-  --butter:       #F2C97C;   /* energy / sunshine */
-  --butter-soft:  #FBEBC9;
-  --lavender:     #C9B6DC;   /* happiness */
-  --lavender-soft:#EFE6F5;
-  --sky:          #A8C5DC;   /* focus / calm */
-  --sky-soft:     #DEEAF3;
+  --sage: #87a878; /* primary calm green */
+  --sage-soft: #dce8d4;
+  --peach: #f4a896; /* stress / warmth */
+  --peach-soft: #fce0d7;
+  --butter: #f2c97c; /* energy / sunshine */
+  --butter-soft: #fbebc9;
+  --lavender: #c9b6dc; /* happiness */
+  --lavender-soft: #efe6f5;
+  --sky: #a8c5dc; /* focus / calm */
+  --sky-soft: #deeaf3;
 
   --chart-1: var(--sage);
   --chart-2: var(--peach);
@@ -162,14 +162,14 @@
   --destructive-foreground: oklch(0.99 0.005 0);
 
   --border: oklch(0.32 0.02 250);
-  --input: oklch(0.30 0.02 250);
+  --input: oklch(0.3 0.02 250);
   --ring: oklch(0.72 0.09 150);
 
-  --sage-soft:    #2a3d2a;
-  --peach-soft:   #3d2a24;
-  --butter-soft:  #3d3520;
-  --lavender-soft:#2e2838;
-  --sky-soft:     #243038;
+  --sage-soft: #2a3d2a;
+  --peach-soft: #3d2a24;
+  --butter-soft: #3d3520;
+  --lavender-soft: #2e2838;
+  --sky-soft: #243038;
 }
 
 @layer base {
@@ -177,22 +177,35 @@
     border-color: var(--color-border);
   }
 
-  html, body {
+  html,
+  body {
     font-family: var(--font-sans);
     background-color: var(--color-background);
     color: var(--color-foreground);
     /* Subtle paper grain so the cream never feels flat */
     background-image:
-      radial-gradient(circle at 15% 10%, color-mix(in oklab, var(--sage) 12%, transparent) 0%, transparent 40%),
-      radial-gradient(circle at 85% 90%, color-mix(in oklab, var(--peach) 12%, transparent) 0%, transparent 45%);
+      radial-gradient(
+        circle at 15% 10%,
+        color-mix(in oklab, var(--sage) 12%, transparent) 0%,
+        transparent 40%
+      ),
+      radial-gradient(
+        circle at 85% 90%,
+        color-mix(in oklab, var(--peach) 12%, transparent) 0%,
+        transparent 45%
+      );
     background-attachment: fixed;
   }
 }
 
 /* Reusable soft shadow utility — matches the airy reference design */
 @utility shadow-soft {
-  box-shadow: 0 6px 24px -10px rgb(60 60 80 / 0.10), 0 2px 6px -2px rgb(60 60 80 / 0.04);
+  box-shadow:
+    0 6px 24px -10px rgb(60 60 80 / 0.1),
+    0 2px 6px -2px rgb(60 60 80 / 0.04);
 }
 @utility shadow-soft-lg {
-  box-shadow: 0 18px 44px -18px rgb(60 60 80 / 0.18), 0 4px 12px -4px rgb(60 60 80 / 0.06);
+  box-shadow:
+    0 18px 44px -18px rgb(60 60 80 / 0.18),
+    0 4px 12px -4px rgb(60 60 80 / 0.06);
 }

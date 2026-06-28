@@ -148,68 +148,68 @@ type AmbientSound = {
 };
 
 const AMBIENT_SOUNDS: AmbientSound[] = [
-  { 
-    id: "sweet-sound", 
-    name: "Sweet Sound", 
-    emoji: "✨", 
-    tone: "var(--lavender-soft)", 
-    src: "/sounds/Sweet_sound.mp3" 
+  {
+    id: "sweet-sound",
+    name: "Sweet Sound",
+    emoji: "✨",
+    tone: "var(--lavender-soft)",
+    src: "/sounds/Sweet_sound.mp3",
   },
-  { 
-    id: "bird-river", 
-    name: "Birds with River", 
-    emoji: "🦜🌊", 
-    tone: "var(--sky-soft)", 
-    src: "/sounds/bird_chirping_with_river.wav" 
+  {
+    id: "bird-river",
+    name: "Birds with River",
+    emoji: "🦜🌊",
+    tone: "var(--sky-soft)",
+    src: "/sounds/bird_chirping_with_river.wav",
   },
-  { 
-    id: "birds", 
-    name: "Birds Chirping", 
-    emoji: "🐦", 
-    tone: "var(--sage-soft)", 
-    src: "/sounds/birds_chirping_sound.wav" 
+  {
+    id: "birds",
+    name: "Birds Chirping",
+    emoji: "🐦",
+    tone: "var(--sage-soft)",
+    src: "/sounds/birds_chirping_sound.wav",
   },
-  { 
-    id: "meditation", 
-    name: "Meditation", 
-    emoji: "🧘", 
-    tone: "var(--peach-soft)", 
-    src: "/sounds/meditation_sound.mp3" 
+  {
+    id: "meditation",
+    name: "Meditation",
+    emoji: "🧘",
+    tone: "var(--peach-soft)",
+    src: "/sounds/meditation_sound.mp3",
   },
-  { 
-    id: "river", 
-    name: "River", 
-    emoji: "🏞️", 
-    tone: "var(--sky-soft)", 
-    src: "/sounds/river_sound.mp3" 
+  {
+    id: "river",
+    name: "River",
+    emoji: "🏞️",
+    tone: "var(--sky-soft)",
+    src: "/sounds/river_sound.mp3",
   },
-  { 
-    id: "rest", 
-    name: "Sound for Rest", 
-    emoji: "😌", 
-    tone: "var(--butter-soft)", 
-    src: "/sounds/sound_for_rest.mp3" 
+  {
+    id: "rest",
+    name: "Sound for Rest",
+    emoji: "😌",
+    tone: "var(--butter-soft)",
+    src: "/sounds/sound_for_rest.mp3",
   },
-  { 
-    id: "piano", 
-    name: "Sweet Piano", 
-    emoji: "🎹", 
-    tone: "var(--lavender-soft)", 
-    src: "/sounds/sweet_piano_sound.mp3" 
+  {
+    id: "piano",
+    name: "Sweet Piano",
+    emoji: "🎹",
+    tone: "var(--lavender-soft)",
+    src: "/sounds/sweet_piano_sound.mp3",
   },
-  { 
-    id: "travelling", 
-    name: "Travelling", 
-    emoji: "✈️", 
-    tone: "var(--sage-soft)", 
-    src: "/sounds/travelling_sound.mp3" 
+  {
+    id: "travelling",
+    name: "Travelling",
+    emoji: "✈️",
+    tone: "var(--sage-soft)",
+    src: "/sounds/travelling_sound.mp3",
   },
-  { 
-    id: "woodwind", 
-    name: "Woodwind Instrument", 
-    emoji: "🎵", 
-    tone: "var(--peach-soft)", 
-    src: "/sounds/woodwind_instrument.mp3" 
+  {
+    id: "woodwind",
+    name: "Woodwind Instrument",
+    emoji: "🎵",
+    tone: "var(--peach-soft)",
+    src: "/sounds/woodwind_instrument.mp3",
   },
 ];
 
@@ -229,7 +229,9 @@ function AmbientSoundGrid({ moodColor }: { moodColor: string }) {
               className="group relative overflow-hidden rounded-2xl p-4 text-left shadow-soft transition-all duration-300 ease-out hover:-translate-y-0.5"
               style={{
                 background: sound.tone,
-                boxShadow: active ? `0 0 0 2px ${moodColor}, 0 12px 30px -10px ${moodColor}aa` : undefined,
+                boxShadow: active
+                  ? `0 0 0 2px ${moodColor}, 0 12px 30px -10px ${moodColor}aa`
+                  : undefined,
                 transform: active ? "scale(1.02)" : undefined,
               }}
             >
@@ -251,11 +253,11 @@ function AmbientSoundGrid({ moodColor }: { moodColor: string }) {
                   />
                 </>
               )}
-              <div className="text-3xl" aria-hidden>{sound.emoji}</div>
+              <div className="text-3xl" aria-hidden>
+                {sound.emoji}
+              </div>
               <p className="mt-6 text-sm font-bold text-foreground">{sound.name}</p>
-              <p className="text-xs text-muted-foreground">
-                {active ? "Playing…" : "Tap to play"}
-              </p>
+              <p className="text-xs text-muted-foreground">{active ? "Playing…" : "Tap to play"}</p>
               <span className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white text-foreground shadow-soft">
                 {active ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
               </span>
@@ -267,7 +269,12 @@ function AmbientSoundGrid({ moodColor }: { moodColor: string }) {
   );
 }
 
-function TabFrame({ kicker, title, blurb, children }: {
+function TabFrame({
+  kicker,
+  title,
+  blurb,
+  children,
+}: {
   kicker: string;
   title: string;
   blurb: string;
@@ -296,22 +303,22 @@ function Questionnaire({ onComplete }: { onComplete: (sound: FrequencySound) => 
     if (currentQuestion < QUESTIONS.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
     } else {
-      let suggestedSound = FREQUENCY_SOUNDS.find(p => p.id === "alpha")!;
+      let suggestedSound = FREQUENCY_SOUNDS.find((p) => p.id === "alpha")!;
 
       const mood = newAnswers.mood;
       const goal = newAnswers.goal;
       const energy = newAnswers.energy;
 
       if (goal === "sleep" || mood === "tired") {
-        suggestedSound = FREQUENCY_SOUNDS.find(p => p.id === "delta")!;
+        suggestedSound = FREQUENCY_SOUNDS.find((p) => p.id === "delta")!;
       } else if (goal === "relax" || mood === "stressed") {
-        suggestedSound = FREQUENCY_SOUNDS.find(p => p.id === "theta")!;
+        suggestedSound = FREQUENCY_SOUNDS.find((p) => p.id === "theta")!;
       } else if (goal === "focus" || mood === "unfocused") {
-        suggestedSound = FREQUENCY_SOUNDS.find(p => p.id === "alpha")!;
+        suggestedSound = FREQUENCY_SOUNDS.find((p) => p.id === "alpha")!;
       } else if (goal === "energy" || energy === "low" || energy === "very-low") {
-        suggestedSound = FREQUENCY_SOUNDS.find(p => p.id === "417hz")!;
+        suggestedSound = FREQUENCY_SOUNDS.find((p) => p.id === "417hz")!;
       } else if (goal === "mood" || mood === "sad") {
-        suggestedSound = FREQUENCY_SOUNDS.find(p => p.id === "528hz")!;
+        suggestedSound = FREQUENCY_SOUNDS.find((p) => p.id === "528hz")!;
       }
 
       onComplete(suggestedSound);
@@ -368,11 +375,19 @@ function Questionnaire({ onComplete }: { onComplete: (sound: FrequencySound) => 
   );
 }
 
-function FrequencyPlayer({ initialSound, onReset }: {
+function FrequencyPlayer({
+  initialSound,
+  onReset,
+}: {
   initialSound: FrequencySound;
   onReset: () => void;
 }) {
-  const { isMuted, playSound: globalPlaySound, currentlyPlayingSoundId, currentMood } = useMindVerse();
+  const {
+    isMuted,
+    playSound: globalPlaySound,
+    currentlyPlayingSoundId,
+    currentMood,
+  } = useMindVerse();
   const [currentSound, setCurrentSound] = useState(initialSound);
 
   const active = currentlyPlayingSoundId === currentSound.id && !isMuted;
@@ -411,9 +426,7 @@ function FrequencyPlayer({ initialSound, onReset }: {
       </div>
 
       <div className="space-y-4">
-        <h3 className="font-display text-lg font-bold text-foreground">
-          All Frequencies
-        </h3>
+        <h3 className="font-display text-lg font-bold text-foreground">All Frequencies</h3>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
           {FREQUENCY_SOUNDS.map((sound) => {
             const isActive = currentlyPlayingSoundId === sound.id && !isMuted;
@@ -427,7 +440,9 @@ function FrequencyPlayer({ initialSound, onReset }: {
                 className="group relative overflow-hidden rounded-2xl p-4 text-left shadow-soft transition-all duration-300 ease-out hover:-translate-y-0.5"
                 style={{
                   background: sound.color + "15",
-                  boxShadow: isActive ? `0 0 0 2px ${currentMood.color}, 0 12px 30px -10px ${currentMood.color}aa` : undefined,
+                  boxShadow: isActive
+                    ? `0 0 0 2px ${currentMood.color}, 0 12px 30px -10px ${currentMood.color}aa`
+                    : undefined,
                   transform: isActive ? "scale(1.02)" : undefined,
                 }}
               >
@@ -449,7 +464,9 @@ function FrequencyPlayer({ initialSound, onReset }: {
                     />
                   </>
                 )}
-                <div className="text-2xl" aria-hidden>{sound.emoji}</div>
+                <div className="text-2xl" aria-hidden>
+                  {sound.emoji}
+                </div>
                 <p className="mt-4 text-sm font-bold text-foreground">{sound.name}</p>
                 <p className="text-xs text-muted-foreground">
                   {isActive ? "Playing…" : "Tap to play"}
@@ -518,7 +535,8 @@ function BreathingCircle({ moodColor }: { moodColor: string }) {
           className="absolute h-full w-full rounded-full opacity-50 blur-2xl"
           style={{
             background: moodColor,
-            animation: running && phase === "hold" ? "breathHoldPulse 2s ease-in-out infinite" : undefined,
+            animation:
+              running && phase === "hold" ? "breathHoldPulse 2s ease-in-out infinite" : undefined,
           }}
         />
         <span
@@ -543,7 +561,11 @@ function BreathingCircle({ moodColor }: { moodColor: string }) {
 }
 
 interface Segment {
-  x1: number; y1: number; x2: number; y2: number; bornAt: number;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  bornAt: number;
 }
 const STROKE_LIFETIME_MS = 4500;
 
@@ -612,13 +634,17 @@ function ZenGarden({ moodColor }: { moodColor: string }) {
     if (!lastPtRef.current) return;
     const next = toLocal(e);
     strokesRef.current.push({
-      x1: lastPtRef.current.x, y1: lastPtRef.current.y,
-      x2: next.x, y2: next.y,
+      x1: lastPtRef.current.x,
+      y1: lastPtRef.current.y,
+      x2: next.x,
+      y2: next.y,
       bornAt: performance.now(),
     });
     lastPtRef.current = next;
   };
-  const onUp = () => { lastPtRef.current = null; };
+  const onUp = () => {
+    lastPtRef.current = null;
+  };
 
   return (
     <section className="rounded-2xl bg-card p-5 shadow-soft">
@@ -629,7 +655,9 @@ function ZenGarden({ moodColor }: { moodColor: string }) {
         </div>
         <button
           type="button"
-          onClick={() => { strokesRef.current = []; }}
+          onClick={() => {
+            strokesRef.current = [];
+          }}
           className="rounded-full bg-sage-soft px-3 py-1 text-xs font-bold text-foreground shadow-soft"
         >
           Smooth sand
@@ -643,8 +671,7 @@ function ZenGarden({ moodColor }: { moodColor: string }) {
         onPointerLeave={onUp}
         className="mt-4 block h-[220px] w-full touch-none rounded-xl"
         style={{
-          background:
-            "radial-gradient(circle at 30% 20%, #fdf5e6 0%, #f1e3c8 70%, #e6d3b0 100%)",
+          background: "radial-gradient(circle at 30% 20%, #fdf5e6 0%, #f1e3c8 70%, #e6d3b0 100%)",
           cursor: "crosshair",
         }}
       />
@@ -684,7 +711,9 @@ export function SoundsView() {
           <button
             onClick={() => setActiveTab("ambient")}
             className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all ${
-              activeTab === "ambient" ? "bg-sage text-white" : "bg-card text-muted-foreground hover:text-foreground"
+              activeTab === "ambient"
+                ? "bg-sage text-white"
+                : "bg-card text-muted-foreground hover:text-foreground"
             }`}
           >
             <div className="flex items-center justify-center gap-2">
@@ -695,7 +724,9 @@ export function SoundsView() {
           <button
             onClick={() => setActiveTab("frequencies")}
             className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all ${
-              activeTab === "frequencies" ? "bg-sage text-white" : "bg-card text-muted-foreground hover:text-foreground"
+              activeTab === "frequencies"
+                ? "bg-sage text-white"
+                : "bg-card text-muted-foreground hover:text-foreground"
             }`}
           >
             <div className="flex items-center justify-center gap-2">

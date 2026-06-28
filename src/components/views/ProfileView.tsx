@@ -3,7 +3,7 @@
  * -----------------------------------------------------------------------------
  * Clean user dashboard frame summarizing account details and interactive application settings toggles.
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Award, Bell, Moon, User, Edit, Check, Heart } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,15 @@ export function ProfileView() {
   const [editingCompanion, setEditingCompanion] = useState(false);
   const [userNameInput, setUserNameInput] = useState(userName ?? "");
   const [companionNameInput, setCompanionNameInput] = useState(companionName);
+
+  // Sync inputs with context values when they change
+  useEffect(() => {
+    setUserNameInput(userName ?? "");
+  }, [userName]);
+
+  useEffect(() => {
+    setCompanionNameInput(companionName);
+  }, [companionName]);
 
   const missionsPct = missionCompletionPercent(completedMissions);
   const displayName = userName ?? "MindVerse Traveller";
@@ -69,9 +78,9 @@ export function ProfileView() {
 
         {/* Account credentials summary */}
         <div className="space-y-0 divide-y divide-border/60 px-5">
-          <EditableCredentialRow 
-            icon={User} 
-            label="Display Name" 
+          <EditableCredentialRow
+            icon={User}
+            label="Display Name"
             value={displayName}
             editing={editingUser}
             setEditing={setEditingUser}
@@ -82,9 +91,9 @@ export function ProfileView() {
               setEditingUser(false);
             }}
           />
-          <EditableCredentialRow 
-            icon={Heart} 
-            label="Companion Name" 
+          <EditableCredentialRow
+            icon={Heart}
+            label="Companion Name"
             value={companionName}
             editing={editingCompanion}
             setEditing={setEditingCompanion}

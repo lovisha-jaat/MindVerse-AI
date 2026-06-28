@@ -42,10 +42,10 @@ export interface RecoveryMission {
 
 /** The four Recovery Missions surfaced in the checklist panel. */
 export const RECOVERY_MISSIONS: readonly RecoveryMission[] = [
-  { id: "water",      label: "Drink 1 Liter Water",                  stressRelief: 4 },
-  { id: "walk",       label: "10 Minute Mindful Walk",                 stressRelief: 5 },
-  { id: "breath",     label: "Complete Breathing Circle Exercise",     stressRelief: 6 },
-  { id: "ml-screen",  label: "Log Screen Time in ML Predictor",       stressRelief: 3 },
+  { id: "water", label: "Drink 1 Liter Water", stressRelief: 4 },
+  { id: "walk", label: "10 Minute Mindful Walk", stressRelief: 5 },
+  { id: "breath", label: "Complete Breathing Circle Exercise", stressRelief: 6 },
+  { id: "ml-screen", label: "Log Screen Time in ML Predictor", stressRelief: 3 },
 ] as const;
 
 /** Sum of relief points for all currently completed mission ids. */

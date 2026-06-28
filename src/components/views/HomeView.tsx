@@ -20,18 +20,14 @@ import { ArrowRight, Bell } from "lucide-react";
 import bearImg from "@/assets/bear.png";
 import { RecoveryMissionsChecklist } from "@/components/RecoveryMissionsChecklist";
 import { useMindVerse } from "@/context/MindVerseContext";
-import {
-  energyFromStress,
-  happinessFromStress,
-  focusFromStress,
-} from "@/lib/dashboardMetrics";
+import { energyFromStress, happinessFromStress, focusFromStress } from "@/lib/dashboardMetrics";
 
 /* ─────────────── helpers ──────────────────────────────────────────────── */
 
 /** Time-of-day → greeting. Called only on the client (see useEffect below). */
 function greetingFor(date: Date): string {
   const h = date.getHours();
-  if (h < 5)  return "Good Night";
+  if (h < 5) return "Good Night";
   if (h < 12) return "Good Morning";
   if (h < 17) return "Good Afternoon";
   if (h < 21) return "Good Evening";
@@ -63,7 +59,14 @@ function StressRing({ value, color }: { value: number; color: string }) {
   return (
     <div className="relative grid place-items-center">
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="rgba(0,0,0,0.06)" strokeWidth={stroke} />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="rgba(0,0,0,0.06)"
+          strokeWidth={stroke}
+        />
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -74,12 +77,17 @@ function StressRing({ value, color }: { value: number; color: string }) {
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
-          style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(0.22,1,0.36,1), stroke 0.6s ease" }}
+          style={{
+            transition: "stroke-dashoffset 1.2s cubic-bezier(0.22,1,0.36,1), stroke 0.6s ease",
+          }}
         />
       </svg>
       <div className="pointer-events-none absolute inset-0 grid place-items-center">
         <div className="text-center">
-          <div className="text-3xl font-extrabold tabular-nums text-foreground">{value}<span className="text-lg text-muted-foreground">%</span></div>
+          <div className="text-3xl font-extrabold tabular-nums text-foreground">
+            {value}
+            <span className="text-lg text-muted-foreground">%</span>
+          </div>
         </div>
       </div>
     </div>
@@ -94,29 +102,39 @@ function Sparkline({ color, seed = 0 }: { color: string; seed?: number }) {
     const v = 0.5 + 0.35 * Math.sin((i + seed) * 0.9) + 0.08 * Math.cos((i + seed) * 2.1);
     return [i * (80 / 13), 28 - v * 24] as const;
   });
-  const d = pts.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+  const d = pts
+    .map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`)
+    .join(" ");
   return (
     <svg viewBox="0 0 80 32" className="h-8 w-full" preserveAspectRatio="none">
-      <path d={d} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d={d}
+        fill="none"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
 /* ─────────────── main view ────────────────────────────────────────────── */
 
-
 export function HomeView() {
   const { userName, effectiveMood, setActiveTab } = useMindVerse();
 
-  const energy    = energyFromStress(effectiveMood.stressLevel);
+  const energy = energyFromStress(effectiveMood.stressLevel);
   const happiness = happinessFromStress(effectiveMood.stressLevel);
-  const focus     = focusFromStress(effectiveMood.stressLevel);
+  const focus = focusFromStress(effectiveMood.stressLevel);
 
   // Greeting depends on the local clock — only know it client-side, so we
   // render a stable placeholder on first paint to avoid React hydration
   // mismatches between the SSR HTML and the browser.
   const [greeting, setGreeting] = useState("Hello");
-  useEffect(() => { setGreeting(greetingFor(new Date())); }, []);
+  useEffect(() => {
+    setGreeting(greetingFor(new Date()));
+  }, []);
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -124,7 +142,8 @@ export function HomeView() {
       <header className="flex items-start justify-between gap-3">
         <div className="space-y-1">
           <p className="text-sm font-medium text-muted-foreground">
-            {greeting}, <span className="text-foreground">{userName ?? "friend"}</span> <span aria-hidden>🌿</span>
+            {greeting}, <span className="text-foreground">{userName ?? "friend"}</span>{" "}
+            <span aria-hidden>🌿</span>
           </p>
           <h1 className="font-display text-3xl font-extrabold leading-tight text-foreground">
             MindVerse <span className="text-sage">AI</span>
@@ -144,7 +163,9 @@ export function HomeView() {
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-5">
         {/* Stress Level card — peach pastel, ring inside */}
         <article className="sm:col-span-2 rounded-[28px] bg-peach-soft p-5 shadow-soft">
-          <p className="text-xs font-semibold uppercase tracking-wider text-foreground/70">Stress Level</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-foreground/70">
+            Stress Level
+          </p>
           <div className="mt-4 flex justify-center">
             <StressRing value={effectiveMood.stressLevel} color={effectiveMood.color} />
           </div>
@@ -155,9 +176,9 @@ export function HomeView() {
 
         {/* Metric stack: Energy / Happiness / Focus */}
         <div className="sm:col-span-3 grid grid-cols-1 gap-3">
-          <MetricRow label="Energy"    value={energy}    color="var(--butter)"   seed={1} />
+          <MetricRow label="Energy" value={energy} color="var(--butter)" seed={1} />
           <MetricRow label="Happiness" value={happiness} color="var(--lavender)" seed={3} />
-          <MetricRow label="Focus"     value={focus}     color="var(--sky)"      seed={5} />
+          <MetricRow label="Focus" value={focus} color="var(--sky)" seed={5} />
         </div>
       </section>
 
@@ -198,12 +219,27 @@ export function HomeView() {
 
 /* ─────────────── sub-components ───────────────────────────────────────── */
 
-function MetricRow({ label, value, color, seed }: { label: string; value: number; color: string; seed: number }) {
+function MetricRow({
+  label,
+  value,
+  color,
+  seed,
+}: {
+  label: string;
+  value: number;
+  color: string;
+  seed: number;
+}) {
   return (
     <div className="flex items-center gap-3 rounded-[24px] bg-card p-4 shadow-soft">
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
-        <p className="mt-0.5 text-2xl font-extrabold tabular-nums text-foreground">{value}<span className="ml-0.5 text-base text-muted-foreground">%</span></p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          {label}
+        </p>
+        <p className="mt-0.5 text-2xl font-extrabold tabular-nums text-foreground">
+          {value}
+          <span className="ml-0.5 text-base text-muted-foreground">%</span>
+        </p>
       </div>
       <div className="w-24 shrink-0">
         <Sparkline color={color} seed={seed} />

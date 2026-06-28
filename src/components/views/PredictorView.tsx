@@ -15,18 +15,43 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
-import { Activity, Brain, Moon, MonitorSmartphone, Coffee, HeartPulse, Sparkles, Download } from "lucide-react";
+import {
+  Activity,
+  Brain,
+  Moon,
+  MonitorSmartphone,
+  Coffee,
+  HeartPulse,
+  Sparkles,
+  Download,
+} from "lucide-react";
 import { useMindVerse } from "@/context/MindVerseContext";
 import { predictStress, type CaffeineLevel } from "@/lib/stressModel";
 import { MoodJournalCalendar } from "@/components/MoodJournalCalendar";
 
 function SliderRow({
-  icon: Icon, label, value, min, max, step = 0.5, unit, onChange,
+  icon: Icon,
+  label,
+  value,
+  min,
+  max,
+  step = 0.5,
+  unit,
+  onChange,
 }: {
-  icon: typeof Moon; label: string; value: number;
-  min: number; max: number; step?: number; unit: string;
+  icon: typeof Moon;
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  unit: string;
   onChange: (v: number) => void;
 }) {
   return (
@@ -37,37 +62,48 @@ function SliderRow({
           <span className="text-sm font-semibold">{label}</span>
         </div>
         <span className="text-sm font-bold tabular-nums text-foreground">
-          {value}<span className="ml-1 text-xs font-normal text-muted-foreground">{unit}</span>
+          {value}
+          <span className="ml-1 text-xs font-normal text-muted-foreground">{unit}</span>
         </span>
       </div>
-      <Slider value={[value]} min={min} max={max} step={step} onValueChange={(v) => onChange(v[0]!)} />
+      <Slider
+        value={[value]}
+        min={min}
+        max={max}
+        step={step}
+        onValueChange={(v) => onChange(v[0]!)}
+      />
     </div>
   );
 }
 
 export function PredictorView() {
-  const { mlInputs, setMlInputs, currentMood, setCurrentMood, logMoodToJournal, moodJournal } = useMindVerse();
+  const { mlInputs, setMlInputs, currentMood, setCurrentMood, logMoodToJournal, moodJournal } =
+    useMindVerse();
   const [loading, setLoading] = useState(false);
   const [lastResult, setLastResult] = useState<ReturnType<typeof predictStress> | null>(null);
 
   const exportCSV = () => {
     if (moodJournal.length === 0) return;
-    
+
     // Create CSV content
     const headers = ["Date", "Label", "Emoji", "Stress Level (%)"];
-    const rows = moodJournal.map(entry => 
-      [entry.date, entry.label, entry.emoji, entry.stressLevel].map(field => 
-        `"${String(field).replace(/"/g, '""')}"`
-      ).join(",")
+    const rows = moodJournal.map((entry) =>
+      [entry.date, entry.label, entry.emoji, entry.stressLevel]
+        .map((field) => `"${String(field).replace(/"/g, '""')}"`)
+        .join(","),
     );
     const csvContent = [headers.join(","), ...rows].join("\n");
-    
+
     // Create and download the file
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", `mindverse-mood-journal-${new Date().toISOString().split("T")[0]}.csv`);
+    link.setAttribute(
+      "download",
+      `mindverse-mood-journal-${new Date().toISOString().split("T")[0]}.csv`,
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -100,23 +136,51 @@ export function PredictorView() {
         <section className="space-y-3 rounded-[28px] bg-card p-5 shadow-soft">
           <header className="mb-1 flex items-center gap-2">
             <Brain className="h-4 w-4 text-sage" />
-            <h2 className="text-sm font-bold uppercase tracking-wider text-foreground/80">Biomarker Inputs</h2>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-foreground/80">
+              Biomarker Inputs
+            </h2>
           </header>
 
-          <SliderRow icon={Moon} label="Sleep Hours" value={mlInputs.sleepHours}
-            min={0} max={12} unit="h" onChange={(v) => setMlInputs({ sleepHours: v })} />
-          <SliderRow icon={Brain} label="Study / Work Hours" value={mlInputs.studyHours}
-            min={0} max={16} unit="h" onChange={(v) => setMlInputs({ studyHours: v })} />
-          <SliderRow icon={MonitorSmartphone} label="Screen Time" value={mlInputs.screenTime}
-            min={0} max={16} unit="h" onChange={(v) => setMlInputs({ screenTime: v })} />
+          <SliderRow
+            icon={Moon}
+            label="Sleep Hours"
+            value={mlInputs.sleepHours}
+            min={0}
+            max={12}
+            unit="h"
+            onChange={(v) => setMlInputs({ sleepHours: v })}
+          />
+          <SliderRow
+            icon={Brain}
+            label="Study / Work Hours"
+            value={mlInputs.studyHours}
+            min={0}
+            max={16}
+            unit="h"
+            onChange={(v) => setMlInputs({ studyHours: v })}
+          />
+          <SliderRow
+            icon={MonitorSmartphone}
+            label="Screen Time"
+            value={mlInputs.screenTime}
+            min={0}
+            max={16}
+            unit="h"
+            onChange={(v) => setMlInputs({ screenTime: v })}
+          />
 
           <div className="space-y-3 rounded-2xl bg-muted/60 p-4">
             <div className="flex items-center gap-2 text-foreground/80">
               <Coffee className="h-4 w-4" />
               <span className="text-sm font-semibold">Caffeine Intake</span>
             </div>
-            <Select value={mlInputs.caffeine} onValueChange={(v) => setMlInputs({ caffeine: v as CaffeineLevel })}>
-              <SelectTrigger className="h-11 rounded-xl border-border bg-card"><SelectValue /></SelectTrigger>
+            <Select
+              value={mlInputs.caffeine}
+              onValueChange={(v) => setMlInputs({ caffeine: v as CaffeineLevel })}
+            >
+              <SelectTrigger className="h-11 rounded-xl border-border bg-card">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="None">None</SelectItem>
                 <SelectItem value="Low">Low</SelectItem>
@@ -136,7 +200,10 @@ export function PredictorView() {
                 <p className="text-xs text-muted-foreground">Stream live heart-rate variability</p>
               </div>
             </div>
-            <Switch checked={!!mlInputs.hrvLinked} onCheckedChange={(v) => setMlInputs({ hrvLinked: v })} />
+            <Switch
+              checked={!!mlInputs.hrvLinked}
+              onCheckedChange={(v) => setMlInputs({ hrvLinked: v })}
+            />
           </div>
         </section>
 
@@ -144,7 +211,9 @@ export function PredictorView() {
         <section className="space-y-4 rounded-[28px] bg-card p-5 shadow-soft">
           <header className="flex items-center gap-2">
             <Activity className="h-4 w-4 text-peach" />
-            <h2 className="text-sm font-bold uppercase tracking-wider text-foreground/80">Results &amp; Analytics</h2>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-foreground/80">
+              Results &amp; Analytics
+            </h2>
           </header>
 
           <div
@@ -158,7 +227,9 @@ export function PredictorView() {
                 <Skeleton className="h-4 w-2/3" />
                 <Skeleton className="h-16 w-full" />
                 <Skeleton className="h-4 w-1/2" />
-                <p className="pt-1 text-xs text-muted-foreground">AI running Random Forest prediction…</p>
+                <p className="pt-1 text-xs text-muted-foreground">
+                  AI running Random Forest prediction…
+                </p>
               </div>
             ) : (
               <div className="flex items-center gap-4">
@@ -169,10 +240,17 @@ export function PredictorView() {
                   {(lastResult ?? currentMood).emoji}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Predicted Tier</p>
-                  <p className="truncate text-2xl font-extrabold text-foreground">{(lastResult ?? currentMood).label}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Predicted Tier
+                  </p>
+                  <p className="truncate text-2xl font-extrabold text-foreground">
+                    {(lastResult ?? currentMood).label}
+                  </p>
                   <p className="mt-1 text-sm text-foreground/70">
-                    Stress score: <span className="font-bold text-foreground">{(lastResult ?? currentMood).stressLevel}%</span>
+                    Stress score:{" "}
+                    <span className="font-bold text-foreground">
+                      {(lastResult ?? currentMood).stressLevel}%
+                    </span>
                   </p>
                 </div>
               </div>
@@ -181,13 +259,17 @@ export function PredictorView() {
 
           {/* Math breakdown — keeps the model transparent */}
           <div className="space-y-1 rounded-2xl bg-muted/60 p-4 font-mono text-[11px] leading-relaxed text-foreground/70">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Math Breakdown</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Math Breakdown
+            </p>
             <p>baseline = 25</p>
             <p>sleep_delta = (8 − {mlInputs.sleepHours}) × 6</p>
             <p>study_load = max(0, {mlInputs.studyHours} − 4) × 3</p>
             <p>screen_load = max(0, {mlInputs.screenTime} − 3) × 2</p>
             <p>caffeine[{mlInputs.caffeine}] contribution</p>
-            <p>interaction = max(0, 8 − {mlInputs.sleepHours}) × {mlInputs.studyHours} × 0.6</p>
+            <p>
+              interaction = max(0, 8 − {mlInputs.sleepHours}) × {mlInputs.studyHours} × 0.6
+            </p>
             {mlInputs.hrvLinked && <p>hrv_bonus = −4</p>}
           </div>
 
@@ -227,12 +309,15 @@ function ExecutiveSummary() {
     ? Math.round(recent.reduce((s, e) => s + e.stressLevel, 0) / recent.length)
     : currentMood.stressLevel;
   const delta = currentMood.stressLevel - avg;
-  const direction = delta > 4 ? "trending higher" : delta < -4 ? "easing downward" : "holding steady";
+  const direction =
+    delta > 4 ? "trending higher" : delta < -4 ? "easing downward" : "holding steady";
 
   const summary = `Hey ${userName ?? "friend"} — your stress signal is currently ${currentMood.stressLevel}% (${currentMood.label}), ${direction} versus your 7-day average of ${avg}%. With ${mlInputs.sleepHours}h sleep, ${mlInputs.studyHours}h of focus work, ${mlInputs.screenTime}h screen time and ${mlInputs.caffeine.toLowerCase()} caffeine intake today, the model suggests ${
-    currentMood.stressLevel > 60 ? "carving out a 10-minute decompression break in the Bear Room."
-    : currentMood.stressLevel > 40 ? "queueing a calming soundscape and a short walk."
-    : "keeping this rhythm — your biomarkers look balanced."
+    currentMood.stressLevel > 60
+      ? "carving out a 10-minute decompression break in the Bear Room."
+      : currentMood.stressLevel > 40
+        ? "queueing a calming soundscape and a short walk."
+        : "keeping this rhythm — your biomarkers look balanced."
   }`;
 
   return (
@@ -242,7 +327,9 @@ function ExecutiveSummary() {
           <span className="grid h-8 w-8 place-items-center rounded-xl bg-white/70 backdrop-blur">
             <Sparkles className="h-4 w-4 text-butter" />
           </span>
-          <h3 className="text-sm font-bold uppercase tracking-widest text-foreground/70">AI Executive Summary</h3>
+          <h3 className="text-sm font-bold uppercase tracking-widest text-foreground/70">
+            AI Executive Summary
+          </h3>
         </div>
         <p className="text-base leading-relaxed text-foreground/90">{summary}</p>
       </div>

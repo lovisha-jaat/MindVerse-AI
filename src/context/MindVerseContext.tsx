@@ -40,6 +40,7 @@ import {
   tierFromScore,
   type MlInputs,
   type MoodResult,
+  type FeelingLevel,
 } from "@/lib/stressModel";
 
 /** All five primary tabs of the mobile-app shell. */
@@ -47,7 +48,7 @@ export type TabId = "home" | "predictor" | "bear-room" | "sounds" | "profile";
 
 /** A single completed mood journal entry — keyed by ISO date string. */
 export interface MoodJournalEntry {
-  date: string;       // YYYY-MM-DD
+  date: string; // YYYY-MM-DD
   label: string;
   color: string;
   emoji: string;
@@ -65,6 +66,8 @@ interface MindVerseState {
   userName: string | null;
   setUserName: (n: string | null) => void;
   logout: () => void;
+  surveyCompleted: boolean;
+  setSurveyCompleted: (c: boolean) => void;
 
   // companion
   companionName: string;
@@ -74,6 +77,7 @@ interface MindVerseState {
   playSound: (src: string, id: string) => void;
   stopSound: () => void;
   currentlyPlayingSoundId: string | null;
+  playPopSound: () => void;
 
   // navigation
   activeTab: TabId;
@@ -163,10 +167,12 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
   // --- initial state -------------------------------------------------------
   // We start optimistic: a "Calm" mood at 34% stress matches the spec default.
   const [userName, setUserNameState] = useState<string | null>(null);
+  const [surveyCompleted, setSurveyCompleted] = useState(false);
   const [companionName, setCompanionNameState] = useState<string>("Coco");
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const [currentlyPlayingSoundId, setCurrentlyPlayingSoundId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
   const currentlyPlayingIdRef = useRef<string | null>(null);
   const reminderIntervalRef = useRef<number | null>(null);
   const isLoggingOutRef = useRef(false); // Flag to prevent persistence during logout
@@ -183,6 +189,9 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
     caffeine: "Medium",
     heartRate: 72,
     hrvLinked: false,
+    currentFeeling: "Okay",
+    exerciseToday: false,
+    ateWell: false,
   });
   const [isMuted, setIsMuted] = useState(false);
   const [completedMissions, setCompletedMissions] = useState<string[]>([]);
@@ -203,8 +212,10 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
       const parsed = JSON.parse(raw);
       if (parsed.userName) setUserNameState(parsed.userName);
       // Always set default to "Coco" if no companionName or it's "Pip" (old default)
-      if (parsed.companionName && parsed.companionName !== "Pip") setCompanionNameState(parsed.companionName);
+      if (parsed.companionName && parsed.companionName !== "Pip")
+        setCompanionNameState(parsed.companionName);
       else setCompanionNameState("Coco");
+      if (parsed.surveyCompleted) setSurveyCompleted(parsed.surveyCompleted);
       if (parsed.mlInputs) setMlInputsState((p) => ({ ...p, ...parsed.mlInputs }));
       if (parsed.currentMood) setCurrentMood(parsed.currentMood);
       if (Array.isArray(parsed.completedMissions)) setCompletedMissions(parsed.completedMissions);
@@ -226,6 +237,7 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
     if (typeof window === "undefined" || isLoggingOutRef.current) return;
     const payload = {
       userName,
+      surveyCompleted,
       companionName,
       mlInputs,
       currentMood,
@@ -242,7 +254,20 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
     } catch {
       /* quota exceeded — silently ignore */
     }
-  }, [userName, companionName, mlInputs, currentMood, completedMissions, moodJournal, gratitudeJournal, customQuotes, isMuted, pushReminders, darkMode]);
+  }, [
+    userName,
+    surveyCompleted,
+    companionName,
+    mlInputs,
+    currentMood,
+    completedMissions,
+    moodJournal,
+    gratitudeJournal,
+    customQuotes,
+    isMuted,
+    pushReminders,
+    darkMode,
+  ]);
 
   // Apply / remove the `dark` class on <html> when the user toggles dark mode.
   useEffect(() => {
@@ -257,6 +282,7 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
       window.localStorage.removeItem(LS_KEY);
     }
     setUserName(null);
+    setSurveyCompleted(false);
     setCompanionName("Coco");
     setCurrentMood({
       label: "Calm",
@@ -287,7 +313,7 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
     }
     currentlyPlayingIdRef.current = null;
     setCurrentlyPlayingSoundId(null);
-    
+
     // Re-enable persistence after a short delay
     setTimeout(() => {
       isLoggingOutRef.current = false;
@@ -329,42 +355,59 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
   }, [pushReminders, sendNotification]);
 
   // --- stable action creators ---------------------------------------------
-  const setUserName = useCallback((n: string | null) => setUserNameState(n ? n.trim() || null : null), []);
-  const setCompanionName = useCallback((n: string) => setCompanionNameState(n.trim() || "Coco"), []);
+  const setUserName = useCallback((n: string | null | undefined) => {
+    if (n == null) {
+      setUserNameState(null);
+    } else {
+      const trimmed = n.trim();
+      setUserNameState(trimmed.length > 0 ? trimmed : null);
+    }
+  }, []);
+  const setCompanionName = useCallback((n: string | null | undefined) => {
+    if (n == null) {
+      setCompanionNameState("Coco");
+    } else {
+      const trimmed = n.trim();
+      setCompanionNameState(trimmed.length > 0 ? trimmed : "Coco");
+    }
+  }, []);
   const setMlInputs = useCallback(
     (patch: Partial<MlInputs>) => setMlInputsState((prev) => ({ ...prev, ...patch })),
     [],
   );
-  
-  const playSound = useCallback((src: string, id: string) => {
-    // If we're already playing this sound, stop it
-    if (currentlyPlayingIdRef.current === id) {
+
+  const playSound = useCallback(
+    (src: string, id: string) => {
+      // If we're already playing this sound, stop it
+      if (currentlyPlayingIdRef.current === id) {
+        if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current.currentTime = 0;
+        }
+        currentlyPlayingIdRef.current = null;
+        setCurrentlyPlayingSoundId(null);
+        return;
+      }
+
+      // Stop any currently playing sound first
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
       }
-      currentlyPlayingIdRef.current = null;
-      setCurrentlyPlayingSoundId(null);
-      return;
-    }
-    
-    // Stop any currently playing sound first
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
-    
-    // Create new audio element only if we're playing a new sound
-    const audio = new Audio(src);
-    audio.loop = true;
-    audio.volume = 0.7;
-    audio.muted = isMuted;
-    audioRef.current = audio;
-    currentlyPlayingIdRef.current = id;
-    setCurrentlyPlayingSoundId(id);
-    audio.play().catch((err) => console.error("Error playing sound:", err));
-  }, [isMuted]);
-  
+
+      // Create new audio element only if we're playing a new sound
+      const audio = new Audio(src);
+      audio.loop = true;
+      audio.volume = 0.7;
+      audio.muted = isMuted;
+      audioRef.current = audio;
+      currentlyPlayingIdRef.current = id;
+      setCurrentlyPlayingSoundId(id);
+      audio.play().catch((err) => console.error("Error playing sound:", err));
+    },
+    [isMuted],
+  );
+
   const stopSound = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
@@ -374,6 +417,42 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
     currentlyPlayingIdRef.current = null;
     setCurrentlyPlayingSoundId(null);
   }, []);
+
+  const playPopSound = useCallback(() => {
+    if (isMuted) return;
+
+    // Create audio context on first use (needs user interaction)
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+
+    const ctx = audioContextRef.current;
+    if (!ctx) return;
+
+    // Resume context if suspended (browsers suspend it by default)
+    if (ctx.state === "suspended") {
+      ctx.resume();
+    }
+
+    // Create oscillator for pop sound
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    // Configure sound: quick sine wave that drops in frequency
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(800, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.15);
+
+    // Quick envelope
+    gain.gain.setValueAtTime(0.4, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.15);
+  }, [isMuted]);
   const toggleMute = useCallback(() => setIsMuted((m) => !m), []);
   const togglePushReminders = useCallback(async () => {
     if (typeof window === "undefined" || !("Notification" in window)) {
@@ -446,7 +525,13 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
       const filtered = prev.filter((e) => e.date !== today);
       return [
         ...filtered,
-        { date: today, label: mood.label, color: mood.color, emoji: mood.emoji, stressLevel: mood.stressLevel },
+        {
+          date: today,
+          label: mood.label,
+          color: mood.color,
+          emoji: mood.emoji,
+          stressLevel: mood.stressLevel,
+        },
       ];
     });
   }, []);
@@ -459,11 +544,14 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
       userName,
       setUserName,
       logout,
+      surveyCompleted,
+      setSurveyCompleted,
       companionName,
       setCompanionName,
       playSound,
       stopSound,
       currentlyPlayingSoundId,
+      playPopSound,
       activeTab,
       setActiveTab,
       currentMood,
@@ -489,23 +577,39 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
       toggleDarkMode,
     }),
     [
-      userName, setUserName,
+      userName,
+      setUserName,
       logout,
-      companionName, setCompanionName,
+      surveyCompleted,
+      setSurveyCompleted,
+      companionName,
+      setCompanionName,
       playSound,
       stopSound,
       currentlyPlayingSoundId,
-      activeTab, setActiveTab,
+      playPopSound,
+      activeTab,
+      setActiveTab,
       currentMood,
       effectiveMood,
-      mlInputs, setMlInputs,
-      isMuted, toggleMute,
-      completedMissions, toggleMission,
-      moodJournal, logMoodToJournal,
-      gratitudeJournal, addGratitudeEntry, removeGratitudeEntry,
-      customQuotes, addCustomQuote, removeCustomQuote,
-      pushReminders, togglePushReminders,
-      darkMode, toggleDarkMode,
+      mlInputs,
+      setMlInputs,
+      isMuted,
+      toggleMute,
+      completedMissions,
+      toggleMission,
+      moodJournal,
+      logMoodToJournal,
+      gratitudeJournal,
+      addGratitudeEntry,
+      removeGratitudeEntry,
+      customQuotes,
+      addCustomQuote,
+      removeCustomQuote,
+      pushReminders,
+      togglePushReminders,
+      darkMode,
+      toggleDarkMode,
     ],
   );
 
