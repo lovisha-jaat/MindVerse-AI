@@ -30,9 +30,11 @@ import {
   HeartPulse,
   Sparkles,
   Download,
+  Smile,
+  Utensils,
 } from "lucide-react";
 import { useMindVerse } from "@/context/MindVerseContext";
-import { predictStress, type CaffeineLevel } from "@/lib/stressModel";
+import { predictStress, type CaffeineLevel, type FeelingLevel } from "@/lib/stressModel";
 import { MoodJournalCalendar } from "@/components/MoodJournalCalendar";
 
 function SliderRow({
@@ -190,6 +192,58 @@ export function PredictorView() {
             </Select>
           </div>
 
+          <div className="space-y-3 rounded-2xl bg-muted/60 p-4">
+            <div className="flex items-center gap-2 text-foreground/80">
+              <Smile className="h-4 w-4" />
+              <span className="text-sm font-semibold">How are you feeling?</span>
+            </div>
+            <Select
+              value={mlInputs.currentFeeling}
+              onValueChange={(v) => setMlInputs({ currentFeeling: v as FeelingLevel })}
+            >
+              <SelectTrigger className="h-11 rounded-xl border-border bg-card">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Great">Great! 😄</SelectItem>
+                <SelectItem value="Good">Good 😊</SelectItem>
+                <SelectItem value="Okay">Okay 😐</SelectItem>
+                <SelectItem value="Low">A bit low 😔</SelectItem>
+                <SelectItem value="Bad">Bad 😫</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center justify-between gap-4 rounded-2xl bg-muted/60 p-4">
+            <div className="flex items-center gap-3">
+              <div className="grid h-9 w-9 place-items-center rounded-xl bg-sage-soft text-sage">
+                <HeartPulse className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-foreground">Exercise today?</p>
+              </div>
+            </div>
+            <Switch
+              checked={!!mlInputs.exerciseToday}
+              onCheckedChange={(v) => setMlInputs({ exerciseToday: v })}
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-4 rounded-2xl bg-muted/60 p-4">
+            <div className="flex items-center gap-3">
+              <div className="grid h-9 w-9 place-items-center rounded-xl bg-sage-soft text-sage">
+                <Utensils className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-foreground">Ate well today?</p>
+              </div>
+            </div>
+            <Switch
+              checked={!!mlInputs.ateWell}
+              onCheckedChange={(v) => setMlInputs({ ateWell: v })}
+            />
+          </div>
+
           <div className="flex items-center justify-between gap-4 rounded-2xl bg-muted/60 p-4">
             <div className="flex items-center gap-3">
               <div className="grid h-9 w-9 place-items-center rounded-xl bg-sage-soft text-sage">
@@ -270,6 +324,9 @@ export function PredictorView() {
             <p>
               interaction = max(0, 8 − {mlInputs.sleepHours}) × {mlInputs.studyHours} × 0.6
             </p>
+            <p>feeling = {mlInputs.currentFeeling} (weighted)</p>
+            {mlInputs.exerciseToday && <p>exercise_bonus = −7</p>}
+            {mlInputs.ateWell && <p>ate_well_bonus = −5</p>}
             {mlInputs.hrvLinked && <p>hrv_bonus = −4</p>}
           </div>
 
