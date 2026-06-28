@@ -44,7 +44,8 @@ Designed with architecture stability and graceful failure parameters, it guarant
 *   🎨 **Zen Garden Canvas:** Low-overhead drawing sandbox engineered for micro-interaction relaxation.
 
 ---
+---
 
 ## 👩‍💻 Author & Main Engineering Architect
 *   **Lead Developer:** Lovisha Jaat
-*   **Portfolio Nexus:** [lovisha-jaat.github.io/My-Portfolio/](https://lovisha-jaat.github.io/My-Portfolio/)
+*   **Live Application Nexus:** [mindverse-ai-five.vercel.app](https://mindverse-ai-five.vercel.app/)
