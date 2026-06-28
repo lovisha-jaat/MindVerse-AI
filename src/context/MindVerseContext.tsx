@@ -216,7 +216,13 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
         setCompanionNameState(parsed.companionName);
       else setCompanionNameState("Coco");
       if (parsed.surveyCompleted) setSurveyCompleted(parsed.surveyCompleted);
-      if (parsed.mlInputs) setMlInputsState((p) => ({ ...p, ...parsed.mlInputs }));
+      if (parsed.mlInputs) setMlInputsState((p) => ({ 
+        ...p, 
+        ...parsed.mlInputs, 
+        currentFeeling: parsed.mlInputs.currentFeeling ?? "Okay",
+        exerciseToday: parsed.mlInputs.exerciseToday ?? false,
+        ateWell: parsed.mlInputs.ateWell ?? false,
+      }));
       if (parsed.currentMood) setCurrentMood(parsed.currentMood);
       if (Array.isArray(parsed.completedMissions)) setCompletedMissions(parsed.completedMissions);
       if (Array.isArray(parsed.moodJournal) && parsed.moodJournal.length) {
