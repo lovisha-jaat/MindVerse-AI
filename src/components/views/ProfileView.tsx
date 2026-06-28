@@ -140,7 +140,10 @@ export function ProfileView() {
         <Button
           variant="destructive"
           className="w-full justify-center bg-peach hover:bg-peach/90"
-          onClick={logout}
+          onClick={() => {
+            console.log("BUTTON CLICKED!");
+            logout();
+          }}
           type="button"
         >
           Log Out
