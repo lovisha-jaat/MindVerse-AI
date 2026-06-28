@@ -297,6 +297,9 @@ export function MindVerseProvider({ children }: { children: ReactNode }) {
       caffeine: "Medium",
       heartRate: 72,
       hrvLinked: false,
+      currentFeeling: "Okay",
+      exerciseToday: false,
+      ateWell: false,
     });
     setIsMuted(false);
     setCompletedMissions([]);
